@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:go_router/go_router.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
@@ -102,22 +103,45 @@ class HouseRentApp extends StatefulWidget {
 
 class _HouseRentAppState extends State<HouseRentApp>
     with WidgetsBindingObserver {
+  late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
+  bool _hasInternet = true;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     NotificationService.startForegroundPolling();
+
+    // Check initial connectivity
+    Connectivity().checkConnectivity().then((result) {
+      _updateConnectionStatus(result);
+    });
+
+    // Listen for changes
+    _connectivitySubscription =
+        Connectivity().onConnectivityChanged.listen(_updateConnectionStatus);
+  }
+
+  void _updateConnectionStatus(List<ConnectivityResult> result) {
+    bool hasInternet = !result.contains(ConnectivityResult.none);
+    if (mounted && _hasInternet != hasInternet) {
+      setState(() {
+        _hasInternet = hasInternet;
+      });
+    }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       unawaited(NotificationService.forceCheckNow());
+      Connectivity().checkConnectivity().then(_updateConnectionStatus);
     }
   }
 
   @override
   void dispose() {
+    _connectivitySubscription.cancel();
     WidgetsBinding.instance.removeObserver(this);
     NotificationService.stopForegroundPolling();
     super.dispose();
@@ -128,6 +152,41 @@ class _HouseRentAppState extends State<HouseRentApp>
     return MaterialApp.router(
       title: 'HouseRent Africa',
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        return Stack(
+          children: [
+            if (child != null) child,
+            if (!_hasInternet)
+              Positioned(
+                top: MediaQuery.of(context).padding.top, // Below status bar
+                left: 0,
+                right: 0,
+                child: Material(
+                  elevation: 4,
+                  child: Container(
+                    color: Colors.red.shade600,
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.wifi_off, color: Colors.white, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'No internet connection',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
       theme: ThemeData(
         scaffoldBackgroundColor: Colors.white,
         primaryColor: const Color(0xFFFFD700), // Yellow

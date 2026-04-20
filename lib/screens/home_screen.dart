@@ -925,6 +925,78 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
+            // Referral Promo Banner (Moved below Landlord Registration Banner)
+            GestureDetector(
+              onTap: () {
+                if (_isLoggedIn) {
+                  if (_userRole == 'dealer') {
+                    context.go('/dealer-dashboard'); // Navigate to dealer dashboard, they can click referral tab
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Referral program is for dealers. Upgrade your account!')));
+                  }
+                } else {
+                  context.go('/login');
+                }
+              },
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFD700), Color(0xFFFF9800)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.orange.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.3),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.group_add_rounded, color: Colors.white, size: 32),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'Refer & Earn 30%!',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Invite others to HouseRent Africa and earn 30% commission.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white),
+                  ],
+                ),
+              ),
+            ),
+
             // Footer
             Container(
               width: double.infinity,
@@ -953,7 +1025,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Divider(color: Colors.grey.shade200),
                   const SizedBox(height: 24),
                   Text(
-                    '© ${DateTime.now().year} HouseRent Africa. All rights reserved.',
+                    '© ${DateTime.now().year} HouseRent Africa. Created by HouseRenta Technologies.',
                     style: TextStyle(color: Colors.grey.shade500, fontSize: 12, fontWeight: FontWeight.w500),
                     textAlign: TextAlign.center,
                   ),

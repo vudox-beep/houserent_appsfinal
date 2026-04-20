@@ -1045,7 +1045,7 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
           children: [
             // Image Gallery Section
             Container(
-              height: 350,
+              height: 280,
               width: double.infinity,
               color: Colors.black,
               child: hasImages ? Stack(
@@ -1219,7 +1219,7 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
                   final price = _property!['price']?.toString() ?? '0';
 
                   final mainContent = Container(
-                    padding: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       // Removed border radius and borders so it touches edges cleanly on mobile
@@ -1246,7 +1246,7 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        Text(title, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF0F2041))),
+                        Text(title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF0F2041))),
                         const SizedBox(height: 8),
                         Row(
                           children: [
@@ -1257,33 +1257,38 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
                         ),
                         const SizedBox(height: 32),
                         
-                        const Text('Overview', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF0F2041))),
+                        const Text('Overview', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F2041))),
                         const SizedBox(height: 16),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            if (typeLower == 'apartment' || typeLower == 'house') ...[
-                              if (beds.isNotEmpty && beds != '0') SizedBox(width: 100, child: _FeatureCard(icon: Icons.bed, label: '$beds Bed')),
-                              if (baths.isNotEmpty && baths != '0') SizedBox(width: 100, child: _FeatureCard(icon: Icons.bathtub, label: '$baths Bath')),
-                            ] else if (typeLower.contains('boarding')) ...[
-                              if (capacity.isNotEmpty && capacity != '0') SizedBox(width: 100, child: _FeatureCard(icon: Icons.group, label: 'Cap: $capacity')),
-                              if (peoplePerRoom.isNotEmpty && peoplePerRoom != '0') SizedBox(width: 100, child: _FeatureCard(icon: Icons.person, label: '$peoplePerRoom/Rm')),
-                            ] else if (typeLower.contains('wedding') || typeLower.contains('studio')) ...[
-                              if (capacity.isNotEmpty && capacity != '0') SizedBox(width: 100, child: _FeatureCard(icon: Icons.groups, label: 'Cap: $capacity')),
-                              if (eventType.isNotEmpty) SizedBox(width: 100, child: _FeatureCard(icon: Icons.event, label: eventType)),
-                            ] else ...[
-                              if (rooms.isNotEmpty && rooms != '0') SizedBox(width: 100, child: _FeatureCard(icon: Icons.door_front_door, label: '$rooms Rooms')),
-                            ],
-                            if (size.isNotEmpty && size != '0') SizedBox(width: 100, child: _FeatureCard(icon: Icons.square_foot, label: '${size}m²')),
-                            SizedBox(width: 100, child: _FeatureCard(icon: Icons.home, label: type)),
-                          ],
+                        LayoutBuilder(
+                          builder: (context, boxConstraints) {
+                            final cardWidth = (boxConstraints.maxWidth - 16) / 3;
+                            return Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                if (typeLower == 'apartment' || typeLower == 'house') ...[
+                                  if (beds.isNotEmpty && beds != '0') SizedBox(width: cardWidth, child: _FeatureCard(icon: Icons.bed, label: '$beds Bed')),
+                                  if (baths.isNotEmpty && baths != '0') SizedBox(width: cardWidth, child: _FeatureCard(icon: Icons.bathtub, label: '$baths Bath')),
+                                ] else if (typeLower.contains('boarding')) ...[
+                                  if (capacity.isNotEmpty && capacity != '0') SizedBox(width: cardWidth, child: _FeatureCard(icon: Icons.group, label: 'Cap: $capacity')),
+                                  if (peoplePerRoom.isNotEmpty && peoplePerRoom != '0') SizedBox(width: cardWidth, child: _FeatureCard(icon: Icons.person, label: '$peoplePerRoom/Rm')),
+                                ] else if (typeLower.contains('wedding') || typeLower.contains('studio')) ...[
+                                  if (capacity.isNotEmpty && capacity != '0') SizedBox(width: cardWidth, child: _FeatureCard(icon: Icons.groups, label: 'Cap: $capacity')),
+                                  if (eventType.isNotEmpty) SizedBox(width: cardWidth, child: _FeatureCard(icon: Icons.event, label: eventType)),
+                                ] else ...[
+                                  if (rooms.isNotEmpty && rooms != '0') SizedBox(width: cardWidth, child: _FeatureCard(icon: Icons.door_front_door, label: '$rooms Rooms')),
+                                ],
+                                if (size.isNotEmpty && size != '0') SizedBox(width: cardWidth, child: _FeatureCard(icon: Icons.square_foot, label: '${size}m²')),
+                                SizedBox(width: cardWidth, child: _FeatureCard(icon: Icons.home, label: type)),
+                              ],
+                            );
+                          }
                         ),
                         const SizedBox(height: 32),
                         const Divider(),
                         const SizedBox(height: 32),
                         
-                        const Text('Description', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF0F2041))),
+                        const Text('Description', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F2041))),
                         const SizedBox(height: 16),
                         Text(
                           description,
@@ -1295,7 +1300,7 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
                         const SizedBox(height: 32),
                         
                         if (amenities.isNotEmpty) ...[
-                          const Text('Amenities', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF0F2041))),
+                          const Text('Amenities', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F2041))),
                           const SizedBox(height: 16),
                           Wrap(
                             spacing: 8,
@@ -1308,7 +1313,7 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
                           const SizedBox(height: 32),
                           const Divider(),
                           const SizedBox(height: 32),
-                          const Text('Property Video', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF0F2041))),
+                          const Text('Property Video', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F2041))),
                           const SizedBox(height: 16),
                           Container(
                             height: 250,
@@ -1331,7 +1336,7 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
                   final sidebarContent = Column(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(24),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           // Removed borders so it touches edges cleanly
@@ -1394,7 +1399,7 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
                             Wrap(
                               crossAxisAlignment: WrapCrossAlignment.end,
                               children: [
-                                Text('$currency $price', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFFFFC107))),
+                                Text('$currency $price', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFFFFC107))),
                                 if (purposeKey == 'service')
                                   const Padding(
                                     padding: EdgeInsets.only(bottom: 6.0, left: 4.0),
@@ -1587,7 +1592,7 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
                       
                       // Map location preview widget
                       Container(
-                        height: 300,
+                        height: 220,
                         width: double.infinity,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
@@ -2012,18 +2017,25 @@ class _FeatureCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ]
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(icon, color: const Color(0xFFFFC107), size: 20),
-          const SizedBox(height: 8),
-          Text(label, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 10), textAlign: TextAlign.center, overflow: TextOverflow.ellipsis),
+          Icon(icon, color: const Color(0xFFFFC107), size: 22),
+          const SizedBox(height: 6),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.black87, fontSize: 11), textAlign: TextAlign.center, overflow: TextOverflow.ellipsis),
         ],
       ),
     );
