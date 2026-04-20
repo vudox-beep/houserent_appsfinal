@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/skeleton_loader.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -15,6 +16,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const String _publicNotifBadgeCountKey =
+      'public_admin_notifications_badge_v1';
   bool _isLoggedIn = false;
   String _userName = '';
   String _userRole = '';
@@ -23,6 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _properties = [];
   bool _isLoading = true;
   String _appVersionLabel = 'Version --';
+  int _publicNotifBadgeCount = 0;
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -31,6 +35,25 @@ class _HomeScreenState extends State<HomeScreen> {
     _checkLoginStatus();
     _loadProperties();
     _loadAppVersion();
+    _loadPublicNotificationBadgeCount();
+    _refreshPublicNotificationBadgeCount();
+  }
+
+  Future<void> _loadPublicNotificationBadgeCount() async {
+    final prefs = await SharedPreferences.getInstance();
+    final count = prefs.getInt(_publicNotifBadgeCountKey) ?? 0;
+    if (!mounted) return;
+    setState(() {
+      _publicNotifBadgeCount = count;
+    });
+  }
+
+  Future<void> _refreshPublicNotificationBadgeCount() async {
+    final count = await NotificationService.refreshPublicNotificationBadgeCount();
+    if (!mounted) return;
+    setState(() {
+      _publicNotifBadgeCount = count;
+    });
   }
 
   Future<void> _loadAppVersion() async {
@@ -153,15 +176,54 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _onItemTapped(int index) {
-    print("Nav tapped: index $index, loggedIn: $_isLoggedIn, role: $_userRole"); // Debug print
+  void _showLoginRequiredPopup() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Login Required',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Please login to view and save your favorite properties.',
+          style: TextStyle(height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Not now'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.go('/login');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFFC107),
+              foregroundColor: Colors.black87,
+            ),
+            child: const Text('Login'),
+          ),
+        ],
+      ),
+    );
+  }
 
-    if (index == 1) {
+  void _onItemTapped(int index) {
+    print("Nav tapped: index $index, loggedIn: $_isLoggedIn, role: $_userRole");
+
+    if (index == 0) {
+      // Home tab clicked
+      setState(() {
+        _selectedIndex = index;
+      });
+    } else if (index == 1) {
+      // Saved clicked
       if (_isLoggedIn) {
         if (_userRole == 'tenant' || _userRole == 'user' || _userRole.isEmpty) { 
           print("Navigating to tenant-dashboard tab 4");
           try {
-            // Using context.go instead of push to ensure clean navigation
             context.go('/tenant-dashboard', extra: {'tab': 4});
           } catch (e) {
             print("Navigation error: $e");
@@ -170,10 +232,11 @@ class _HomeScreenState extends State<HomeScreen> {
           context.go('/dealer-dashboard');
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please login to view saved properties')));
-        context.go('/login');
+        _showLoginRequiredPopup();
       }
     } else if (index == 2) {
+      context.go('/public-notifications');
+    } else if (index == 3) {
       // Profile clicked
       if (_isLoggedIn) {
         if (_userRole == 'dealer') {
@@ -184,11 +247,6 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         context.go('/login');
       }
-    } else {
-      // Home tab clicked
-      setState(() {
-        _selectedIndex = index;
-      });
     }
   }
 
@@ -217,6 +275,47 @@ class _HomeScreenState extends State<HomeScreen> {
         Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87)),
         const SizedBox(height: 4),
         Text(desc, style: TextStyle(color: Colors.grey.shade600, fontSize: 12, height: 1.4)),
+      ],
+    );
+  }
+
+  Widget _buildNotificationIcon({
+    required bool active,
+    Color? iconColor,
+  }) {
+    final icon = Icon(
+      active ? Icons.notifications : Icons.notifications_none,
+      color: iconColor,
+    );
+    if (_publicNotifBadgeCount <= 0) return icon;
+
+    final badgeText =
+        _publicNotifBadgeCount > 99 ? '99+' : _publicNotifBadgeCount.toString();
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        icon,
+        Positioned(
+          right: -8,
+          top: -6,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(
+              color: Colors.red.shade600,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            constraints: const BoxConstraints(minWidth: 16, minHeight: 14),
+            child: Text(
+              badgeText,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -871,17 +970,22 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
+        items: <BottomNavigationBarItem>[
+          const BottomNavigationBarItem(
             icon: Icon(Icons.home),
             label: 'Home',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.favorite_border),
             activeIcon: Icon(Icons.favorite),
             label: 'Saved',
           ),
           BottomNavigationBarItem(
+            icon: _buildNotificationIcon(active: false),
+            activeIcon: _buildNotificationIcon(active: true),
+            label: 'Alerts',
+          ),
+          const BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
             activeIcon: Icon(Icons.person),
             label: 'Profile',

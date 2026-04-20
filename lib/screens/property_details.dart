@@ -11,7 +11,9 @@ import 'package:chewie/chewie.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 import '../utils/app_error.dart';
+import '../widgets/skeleton_loader.dart';
 
 class PropertyDetailsScreen extends StatefulWidget {
   final int propertyId;
@@ -22,6 +24,8 @@ class PropertyDetailsScreen extends StatefulWidget {
 }
 
 class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
+  static const String _publicNotifBadgeCountKey =
+      'public_admin_notifications_badge_v1';
   Map<String, dynamic>? _property;
   bool _isLoading = true;
   String? _errorMessage;
@@ -37,7 +41,16 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
   final _inquiryEmailController = TextEditingController();
   final _inquiryPhoneController = TextEditingController();
   final _inquiryMessageController = TextEditingController();
+  final _landlordReviewController = TextEditingController();
   bool _isSendingInquiry = false;
+  int _publicNotifBadgeCount = 0;
+  String _currentUserId = '';
+  bool _isLoadingLandlordRating = false;
+  bool _isSubmittingLandlordRating = false;
+  bool _hasRatedLandlord = false;
+  double _selectedLandlordRating = 0;
+  double _averageLandlordRating = 0;
+  int _totalLandlordRatings = 0;
 
   bool _isServiceType(String typeLower) {
     return typeLower.contains('wedding') ||
@@ -77,8 +90,27 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
   void initState() {
     super.initState();
     _pageController = PageController();
+    _loadPublicNotificationBadgeCount();
+    _refreshPublicNotificationBadgeCount();
     _checkLoginStatus();
     _fetchPropertyDetails();
+  }
+
+  Future<void> _loadPublicNotificationBadgeCount() async {
+    final prefs = await SharedPreferences.getInstance();
+    final count = prefs.getInt(_publicNotifBadgeCountKey) ?? 0;
+    if (!mounted) return;
+    setState(() {
+      _publicNotifBadgeCount = count;
+    });
+  }
+
+  Future<void> _refreshPublicNotificationBadgeCount() async {
+    final count = await NotificationService.refreshPublicNotificationBadgeCount();
+    if (!mounted) return;
+    setState(() {
+      _publicNotifBadgeCount = count;
+    });
   }
 
   @override
@@ -88,6 +120,7 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
     _inquiryEmailController.dispose();
     _inquiryPhoneController.dispose();
     _inquiryMessageController.dispose();
+    _landlordReviewController.dispose();
     _videoPlayerController?.dispose();
     _chewieController?.dispose();
     super.dispose();
@@ -106,8 +139,12 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
             _isLoggedIn = true;
             _userName = profile['name'] ?? 'User';
             _userRole = role ?? 'tenant';
+            _currentUserId = profile['id']?.toString() ??
+                profile['user']?['id']?.toString() ??
+                '';
           });
           _checkFavoriteStatus();
+          _loadLandlordRatingSummary();
         }
       } catch (e) {
         if (mounted) {
@@ -538,6 +575,7 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
           _property = details;
           _isLoading = false;
         });
+        _loadLandlordRatingSummary();
         
         final videoUrl = _property!['video_url']?.toString();
         if (videoUrl != null && videoUrl.trim().isNotEmpty) {
@@ -549,6 +587,110 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
         setState(() {
           _errorMessage = AppError.userMessage(e, fallback: 'Unable to load property details.');
           _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadLandlordRatingSummary() async {
+    if (_property == null) return;
+    final dealerId = _property!['dealer_id']?.toString() ?? '';
+    final propertyId = _property!['id']?.toString() ?? '';
+    if (dealerId.isEmpty || propertyId.isEmpty) return;
+
+    setState(() {
+      _isLoadingLandlordRating = true;
+    });
+
+    try {
+      final response = await ApiService.fetchLandlordRatingSummary(
+        dealerId: dealerId,
+        propertyId: propertyId,
+      );
+      final data = Map<String, dynamic>.from(response['data'] ?? {});
+      final myRating = data['my_rating'];
+
+      if (mounted) {
+        setState(() {
+          _averageLandlordRating =
+              double.tryParse(data['average_rating']?.toString() ?? '0') ?? 0;
+          _totalLandlordRatings =
+              int.tryParse(data['total_ratings']?.toString() ?? '0') ?? 0;
+          if (myRating is Map) {
+            final parsedRating =
+                double.tryParse(myRating['rating']?.toString() ?? '0') ?? 0;
+            _selectedLandlordRating = parsedRating;
+            _hasRatedLandlord = parsedRating > 0;
+            _landlordReviewController.text =
+                (myRating['review'] ?? '').toString();
+          } else {
+            _selectedLandlordRating = 0;
+            _hasRatedLandlord = false;
+            _landlordReviewController.clear();
+          }
+        });
+      }
+    } catch (_) {
+      // Optional enhancement - keep UI quiet if rating API is temporarily unavailable.
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingLandlordRating = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _submitLandlordRating() async {
+    if (_property == null) return;
+    if (!_isLoggedIn) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login to rate the landlord')),
+      );
+      return;
+    }
+    if (_selectedLandlordRating < 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a rating from 1 to 5 stars')),
+      );
+      return;
+    }
+
+    final dealerId = _property!['dealer_id']?.toString() ?? '';
+    final propertyId = _property!['id']?.toString() ?? '';
+    if (dealerId.isEmpty || propertyId.isEmpty) return;
+
+    setState(() {
+      _isSubmittingLandlordRating = true;
+    });
+
+    try {
+      await ApiService.submitLandlordRating(
+        dealerId: dealerId,
+        propertyId: propertyId,
+        rating: _selectedLandlordRating.round(),
+        review: _landlordReviewController.text,
+      );
+      if (mounted) {
+        await _loadLandlordRatingSummary();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Thanks, your rating was saved')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppError.userMessage(e, fallback: 'Could not save rating. Try again.'),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmittingLandlordRating = false;
         });
       }
     }
@@ -692,13 +834,82 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
     Share.share(shareText, subject: 'Check out this property: $title');
   }
 
+  Widget _buildDetailsSkeleton() {
+    return Scaffold(
+      appBar: AppBar(backgroundColor: const Color(0xFFFFC107)),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            SkeletonBox(
+              height: 320,
+              borderRadius: BorderRadius.all(Radius.circular(16)),
+            ),
+            SizedBox(height: 16),
+            SkeletonBox(height: 24, width: 260),
+            SizedBox(height: 10),
+            SkeletonBox(height: 18, width: 140),
+            SizedBox(height: 8),
+            SkeletonBox(height: 16, width: 180),
+            SizedBox(height: 20),
+            SkeletonBox(
+              height: 110,
+              borderRadius: BorderRadius.all(Radius.circular(14)),
+            ),
+            SizedBox(height: 14),
+            SkeletonBox(
+              height: 110,
+              borderRadius: BorderRadius.all(Radius.circular(14)),
+            ),
+            SizedBox(height: 14),
+            SkeletonBox(
+              height: 140,
+              borderRadius: BorderRadius.all(Radius.circular(14)),
+            ),
+            SizedBox(height: 14),
+            SkeletonBox(
+              height: 220,
+              borderRadius: BorderRadius.all(Radius.circular(14)),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.favorite_border),
+            activeIcon: Icon(Icons.favorite),
+            label: 'Saved',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.notifications_none),
+            activeIcon: Icon(Icons.notifications),
+            label: 'Alerts',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
+        currentIndex: 0,
+        selectedItemColor: const Color(0xFFFFC107),
+        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Scaffold(
-        appBar: AppBar(backgroundColor: const Color(0xFFFFC107)),
-        body: const Center(child: CircularProgressIndicator()),
-      );
+      return _buildDetailsSkeleton();
     }
 
     if (_property == null) {
@@ -778,11 +989,40 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
           ),
         ),
         actions: [
+          IconButton(
+            icon: _buildNotificationIcon(
+              active: false,
+              iconColor: Colors.white,
+            ),
+            tooltip: 'Notifications',
+            onPressed: () {
+              context.go('/public-notifications');
+            },
+          ),
           if (_isLoggedIn)
-            TextButton.icon(
-              onPressed: _navigateToDashboard,
-              icon: const Icon(Icons.person, color: Colors.white),
-              label: Text('Hi, ${_userName.split(' ').first}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            Builder(
+              builder: (context) {
+                final isNarrow = MediaQuery.of(context).size.width < 430;
+                final firstName = _userName.split(' ').first;
+                if (isNarrow) {
+                  return IconButton(
+                    icon: const Icon(Icons.person, color: Colors.white),
+                    tooltip: 'Dashboard',
+                    onPressed: _navigateToDashboard,
+                  );
+                }
+                return TextButton.icon(
+                  onPressed: _navigateToDashboard,
+                  icon: const Icon(Icons.person, color: Colors.white),
+                  label: Text(
+                    'Hi, ${firstName.length > 10 ? '${firstName.substring(0, 10)}…' : firstName}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                );
+              },
             ),
           IconButton(
             icon: const Icon(Icons.share, color: Colors.white),
@@ -1136,6 +1376,19 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
                                 ],
                               ),
                             ),
+                            const Text(
+                              'Listing Owner',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.black54,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            _buildOwnerCard(),
+                            const SizedBox(height: 16),
+                            _buildLandlordRatingCard(),
+                            const SizedBox(height: 20),
                             const Text('Price', style: TextStyle(fontSize: 16, color: Colors.black54)),
                             const SizedBox(height: 8),
                             Wrap(
@@ -1405,27 +1658,32 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
+        items: <BottomNavigationBarItem>[
+          const BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
             activeIcon: Icon(Icons.home),
             label: 'Home',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.favorite_border),
             activeIcon: Icon(Icons.favorite),
             label: 'Saved',
           ),
           BottomNavigationBarItem(
+            icon: _buildNotificationIcon(active: false),
+            activeIcon: _buildNotificationIcon(active: true),
+            label: 'Alerts',
+          ),
+          const BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
             activeIcon: Icon(Icons.person),
             label: 'Profile',
           ),
         ],
         currentIndex: 0,
-        selectedItemColor: const Color(0xFFFFC107), // Yellow for active items
-        unselectedItemColor: Colors.grey, // Grey for unselected
-        backgroundColor: Colors.white, // White background
+        selectedItemColor: const Color(0xFFFFC107),
+        unselectedItemColor: Colors.grey,
+        backgroundColor: Colors.white,
         onTap: (index) {
           if (index == 0) {
             context.go('/home');
@@ -1441,6 +1699,8 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
               context.go('/login');
             }
           } else if (index == 2) {
+            context.go('/public-notifications');
+          } else if (index == 3) {
             if (_isLoggedIn) {
               if (_userRole == 'dealer') {
                 context.go('/dealer-dashboard'); 
@@ -1471,6 +1731,272 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
           const Icon(Icons.check_circle, color: Colors.green, size: 12),
           const SizedBox(width: 4),
           Flexible(child: Text(text, style: const TextStyle(color: Colors.black87, fontSize: 10), overflow: TextOverflow.ellipsis)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationIcon({
+    required bool active,
+    double iconSize = 24,
+    Color? iconColor,
+  }) {
+    final icon = Icon(
+      active ? Icons.notifications : Icons.notifications_none,
+      color: iconColor,
+      size: iconSize,
+    );
+
+    if (_publicNotifBadgeCount <= 0) return icon;
+    final badgeText =
+        _publicNotifBadgeCount > 99 ? '99+' : _publicNotifBadgeCount.toString();
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        icon,
+        Positioned(
+          right: -8,
+          top: -6,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(
+              color: Colors.red.shade600,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            constraints: const BoxConstraints(minWidth: 16, minHeight: 14),
+            child: Text(
+              badgeText,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOwnerCard() {
+    if (_property == null) return const SizedBox.shrink();
+    final ownerName = (_property!['dealer_name'] ?? 'Listing owner').toString();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: const Color(0xFFFFC107).withOpacity(0.25),
+                child: const Icon(Icons.person, color: Color(0xFF5A3D31)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ownerName,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Landlord Rating Summary
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Row(
+              children: [
+                // Stars
+                ...List.generate(
+                  5,
+                  (index) => Icon(
+                    index < _averageLandlordRating.round()
+                        ? Icons.star
+                        : Icons.star_border,
+                    color: const Color(0xFFFFC107),
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Rating value and count
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _averageLandlordRating > 0
+                          ? '${_averageLandlordRating.toStringAsFixed(1)}'
+                          : 'Not rated',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Color(0xFF5A3D31),
+                      ),
+                    ),
+                    if (_totalLandlordRatings > 0)
+                      Text(
+                        '${_totalLandlordRatings} ${_totalLandlordRatings == 1 ? 'rating' : 'ratings'}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.black54,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLandlordRatingCard() {
+    if (_property == null) return const SizedBox.shrink();
+    final dealerId = _property!['dealer_id']?.toString() ?? '';
+    final isOwnerViewingOwnListing =
+        _isLoggedIn && _currentUserId.isNotEmpty && _currentUserId == dealerId;
+    final canRate = _isLoggedIn && !isOwnerViewingOwnListing;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Rate Landlord',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          if (_isLoadingLandlordRating)
+            const LinearProgressIndicator(minHeight: 2)
+          else
+            Row(
+              children: [
+                ...List.generate(
+                  5,
+                  (index) => Icon(
+                    index < _averageLandlordRating.round()
+                        ? Icons.star
+                        : Icons.star_border,
+                    color: const Color(0xFFFFC107),
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _totalLandlordRatings > 0
+                      ? '${_averageLandlordRating.toStringAsFixed(1)} ($_totalLandlordRatings)'
+                      : 'Not rated yet',
+                  style: const TextStyle(color: Colors.black54),
+                ),
+              ],
+            ),
+          const SizedBox(height: 12),
+          if (canRate)
+            Text(
+              _hasRatedLandlord
+                  ? 'You have already rated this landlord.'
+                  : 'You have not rated this landlord yet.',
+              style: const TextStyle(fontSize: 13, color: Colors.black54),
+            ),
+          if (canRate) const SizedBox(height: 8),
+          if (!canRate)
+            Text(
+              _isLoggedIn
+                  ? 'You cannot rate your own listing.'
+                  : 'Login to rate this landlord.',
+              style: const TextStyle(fontSize: 13, color: Colors.black54),
+            )
+          else ...[
+            Row(
+              children: List.generate(
+                5,
+                (index) {
+                  final star = index + 1;
+                  return IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedLandlordRating = star.toDouble();
+                      });
+                    },
+                    icon: Icon(
+                      star <= _selectedLandlordRating
+                          ? Icons.star
+                          : Icons.star_border,
+                      color: const Color(0xFFFFC107),
+                    ),
+                    constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                    padding: const EdgeInsets.all(0),
+                    visualDensity: VisualDensity.compact,
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _landlordReviewController,
+              maxLines: 2,
+              decoration: InputDecoration(
+                hintText: 'Write a short review (optional)',
+                filled: true,
+                fillColor: Colors.grey.shade50,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isSubmittingLandlordRating ? null : _submitLandlordRating,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFFC107),
+                  foregroundColor: Colors.black87,
+                ),
+                child: _isSubmittingLandlordRating
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.black87,
+                        ),
+                      )
+                    : const Text('Submit Rating'),
+              ),
+            ),
+          ],
         ],
       ),
     );

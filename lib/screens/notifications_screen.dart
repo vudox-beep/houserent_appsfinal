@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
-import '../../utils/app_error.dart';
+import '../services/api_service.dart';
+import '../utils/app_error.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});

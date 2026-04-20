@@ -8,6 +8,7 @@ import 'dealer_profile_screen.dart';
 import 'dealer_add_property_screen.dart';
 import 'dealer_tenants_screen.dart';
 import 'dealer_payment_history_screen.dart';
+import 'dealer_referral_screen.dart';
 import '../../services/api_service.dart';
 import '../../utils/app_error.dart';
 import '../notifications_screen.dart';
@@ -287,6 +288,11 @@ class _DealerDashboardState extends State<DealerDashboard> {
             activeIcon: Icon(Icons.person),
             label: 'Profile',
           ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.group_add_outlined),
+            activeIcon: Icon(Icons.group_add),
+            label: 'Referral',
+          ),
         ],
         currentIndex: _getBottomNavIndex(),
         selectedItemColor: const Color(0xFFFFC107),
@@ -300,6 +306,7 @@ class _DealerDashboardState extends State<DealerDashboard> {
             if (index == 4) _selectedIndex = 3; // Subscription
             if (index == 5) _selectedIndex = 5; // Tenants
             if (index == 6) _selectedIndex = 4; // Profile
+            if (index == 7) _selectedIndex = 8; // Referral
           });
         },
         type: BottomNavigationBarType.fixed,
@@ -318,6 +325,7 @@ class _DealerDashboardState extends State<DealerDashboard> {
       case 3: return 4; // Subscription
       case 5: return 5; // Tenants
       case 4: return 6; // Profile
+      case 8: return 7; // Referral
       default: return 0;
     }
   }
@@ -581,6 +589,8 @@ class _DealerDashboardState extends State<DealerDashboard> {
         return const DealerPaymentHistoryScreen();
       case 7:
         return const NotificationsScreen();
+      case 8:
+        return const DealerReferralScreen();
       case 0:
       default:
         return _buildOverview();

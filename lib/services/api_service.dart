@@ -447,6 +447,69 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> fetchLandlordRatingSummary({
+    required String dealerId,
+    String? propertyId,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+
+    final query = <String, String>{
+      'dealer_id': dealerId,
+      if (propertyId != null && propertyId.trim().isNotEmpty) 'property_id': propertyId,
+    };
+
+    final uri = Uri.parse('$baseUrl/public/landlord_ratings.php')
+        .replace(queryParameters: query);
+
+    final response = await http.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = _decodeJsonObjectSafe(response.body);
+      if (decoded['status'] == 'success') return decoded;
+      throw Exception(decoded['message'] ?? 'Failed to load landlord rating');
+    }
+    throw Exception('Failed to load landlord rating: ${response.statusCode}');
+  }
+
+  static Future<Map<String, dynamic>> submitLandlordRating({
+    required String dealerId,
+    required String propertyId,
+    required int rating,
+    String review = '',
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/public/landlord_ratings.php'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'action': 'submit_rating',
+        'dealer_id': dealerId,
+        'property_id': propertyId,
+        'rating': rating,
+        'review': review.trim(),
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = _decodeJsonObjectSafe(response.body);
+      if (decoded['status'] == 'success') return decoded;
+      throw Exception(decoded['message'] ?? 'Failed to submit rating');
+    }
+    throw Exception('Failed to submit rating: ${response.statusCode}');
+  }
+
   static Future<dynamic> fetchPaymentHistory() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
@@ -858,6 +921,95 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> fetchTenantRatingSummary(
+      String tenantId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+
+    final uri = Uri.parse('$baseUrl/dealer/tenants/ratings.php')
+        .replace(queryParameters: {'tenant_id': tenantId});
+
+    final response = await http.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = _decodeJsonObjectSafe(response.body);
+      if (decoded['status'] == 'success') return decoded;
+      throw Exception(decoded['message'] ?? 'Failed to load tenant rating');
+    }
+    throw Exception('Server error: ${response.statusCode}');
+  }
+
+  static Future<List<Map<String, dynamic>>> fetchDealerTenantRatings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/dealer/tenants/ratings.php'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = _decodeJsonObjectSafe(response.body);
+      if (decoded['status'] != 'success') {
+        throw Exception(decoded['message'] ?? 'Failed to load tenant ratings');
+      }
+      final raw = decoded['data'];
+      if (raw is List) {
+        return raw
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      }
+      return <Map<String, dynamic>>[];
+    }
+
+    throw Exception('Server error: ${response.statusCode}');
+  }
+
+  static Future<Map<String, dynamic>> submitTenantRating({
+    required String tenantId,
+    required String rentalId,
+    required int rating,
+    String review = '',
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+
+    final payload = <String, dynamic>{
+      'tenant_id': tenantId,
+      'rating': rating.clamp(1, 5),
+      'review': review.trim(),
+    };
+    if (rentalId.trim().isNotEmpty) {
+      payload['rental_id'] = rentalId.trim();
+    }
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/dealer/tenants/ratings.php'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token'
+      },
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = _decodeJsonObjectSafe(response.body);
+      if (decoded['status'] == 'success') return decoded;
+      throw Exception(decoded['message'] ?? 'Failed to save tenant rating');
+    }
+    throw Exception('Server error: ${response.statusCode}');
+  }
+
   static Future<Map<String, dynamic>> addTenant(Map<String, dynamic> data) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
@@ -930,6 +1082,61 @@ class ApiService {
       }
     } else {
       throw Exception('Failed to check dealer status: ${response.statusCode}');
+    }
+  }
+
+  static Future<Map<String, dynamic>> fetchDealerReferralDashboard({
+    String action = 'dashboard',
+    String? userId,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+
+    String resolvedUserId = (userId ?? '').trim();
+    if (resolvedUserId.isEmpty) {
+      resolvedUserId = (prefs.getString('user_id') ?? '').trim();
+    }
+    if (resolvedUserId.isEmpty) {
+      final profile = await getProfile();
+      resolvedUserId = profile['id']?.toString() ??
+          profile['user']?['id']?.toString() ??
+          '';
+      if (resolvedUserId.isNotEmpty) {
+        await prefs.setString('user_id', resolvedUserId);
+      }
+    }
+    if (resolvedUserId.isEmpty) {
+      throw Exception('User ID is required');
+    }
+
+    final normalizedAction = action.trim().isEmpty ? 'dashboard' : action.trim();
+    // Pointing exactly to houseforrent.site/api as requested
+    final endpoint = 'https://houseforrent.site/api/referral.php';
+
+    try {
+      // Pass as query parameters as a fallback, but still send POST body
+      final uri = Uri.parse('$endpoint?user_id=$resolvedUserId&action=$normalizedAction');
+      final response = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+        body: {
+          'action': normalizedAction,
+          'user_id': resolvedUserId,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final decoded = _decodeJsonObjectSafe(response.body);
+        if (decoded['status'] == 'success') return decoded;
+        throw Exception(decoded['message'] ?? 'Failed to load referral dashboard');
+      } else {
+        throw Exception('Server error: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Failed to connect to referral API: $e');
     }
   }
 
@@ -1193,7 +1400,9 @@ class ApiService {
   static Future<List<dynamic>> fetchNotifications() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
-    final role  = prefs.getString('role') ?? 'user';
+    final role = (prefs.getString('role') ?? 'user').trim().isEmpty
+        ? 'user'
+        : (prefs.getString('role') ?? 'user').trim();
 
     // Try cached user_id first; fall back to getProfile() if missing
     String userId = prefs.getString('user_id') ?? '';
@@ -1212,50 +1421,145 @@ class ApiService {
       throw Exception('Not authenticated. Please log in again.');
     }
 
-    final response = await http.post(
-      Uri.parse('$baseUrl/notifications/notifications.php'),
+    final endpoint = Uri.parse('$baseUrl/notifications/notifications.php');
+    final userIdInt = int.tryParse(userId) ?? 0;
+
+    final jsonResponse = await http.post(
+      endpoint,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
       body: jsonEncode({
-        'action':  'get_notifications',
-        'user_id': int.tryParse(userId) ?? 0,
-        'role':    role,
+        'action': 'get_notifications',
+        'user_id': userIdInt,
+        'role': role,
+      }),
+    );
+
+    if (jsonResponse.statusCode == 200) {
+      final decoded = _decodeJsonObjectSafe(jsonResponse.body);
+      if (decoded['status'] == 'success') return decoded['data'] ?? [];
+    }
+
+    final formResponse = await http.post(
+      endpoint,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Bearer $token',
+      },
+      body: {
+        'action': 'get_notifications',
+        'user_id': userIdInt.toString(),
+        'role': role,
+      },
+    );
+
+    if (formResponse.statusCode == 200) {
+      final decoded = _decodeJsonObjectSafe(formResponse.body);
+      if (decoded['status'] == 'success') return decoded['data'] ?? [];
+      throw Exception(decoded['message'] ?? 'Failed to load notifications');
+    }
+
+    throw Exception(
+      'Server error: ${jsonResponse.statusCode}/${formResponse.statusCode}',
+    );
+  }
+
+  static Future<List<dynamic>> fetchPublicAdminNotifications() async {
+    // Use the same notifications API endpoint used by tenant/dealer panels.
+    final endpoint = Uri.parse('$baseUrl/notifications/notifications.php');
+
+    final response = await http.post(
+      endpoint,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'action': 'get_notifications',
+        'user_id': 0,
+        'role': 'user',
       }),
     );
 
     if (response.statusCode == 200) {
-      try {
-        // Clean invisible characters/BOM or PHP notices before the JSON
-        String rawBody = response.body;
-        int startIndex = rawBody.indexOf('{');
-        if (startIndex != -1) {
-          rawBody = rawBody.substring(startIndex);
-        }
-        
-        final decoded = jsonDecode(rawBody);
-        if (decoded['status'] == 'success') {
-          return decoded['data'] ?? [];
-        }
-        throw Exception(decoded['message'] ?? 'Failed to load notifications');
-      } catch (e) {
-        throw Exception("Server format error. Raw body: ${response.body}");
+      final decoded = _decodeJsonObjectSafe(response.body);
+      if (decoded['status'] == 'success') {
+        final list = decoded['data'];
+        if (list is List) return list;
+        return <dynamic>[];
       }
-    } else {
-      throw Exception('Server error: ${response.statusCode}\n${response.body}');
     }
+
+    // Fallback to form payload for servers that do not parse JSON POST bodies.
+    final formResponse = await http.post(
+      endpoint,
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: {
+        'action': 'get_notifications',
+        'user_id': '0',
+        'role': 'user',
+      },
+    );
+
+    if (formResponse.statusCode == 200) {
+      final decoded = _decodeJsonObjectSafe(formResponse.body);
+      if (decoded['status'] == 'success') {
+        final list = decoded['data'];
+        if (list is List) return list;
+        return <dynamic>[];
+      }
+      throw Exception(decoded['message'] ?? 'Failed to load notifications');
+    }
+
+    // Last fallback: some older backends may enforce role + user_id strongly.
+    final strictFallback = await http.post(
+      Uri.parse('$baseUrl/notifications/notifications.php'),
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: {
+        'action': 'get_notifications',
+        'user_id': '0',
+        'role': 'all',
+      },
+    );
+
+    if (strictFallback.statusCode == 200) {
+      final decoded = _decodeJsonObjectSafe(strictFallback.body);
+      if (decoded['status'] == 'success') {
+        final list = decoded['data'];
+        if (list is List) return list;
+        return <dynamic>[];
+      }
+      throw Exception(decoded['message'] ?? 'Failed to load notifications');
+    }
+
+    throw Exception(
+      'Server error: ${formResponse.statusCode} / ${strictFallback.statusCode}',
+    );
   }
 
   static Future<void> markNotificationRead(String notificationId) async {
     final prefs = await SharedPreferences.getInstance();
     final token  = prefs.getString('token') ?? '';
-    final role   = prefs.getString('role') ?? 'user';
-    final userId = int.tryParse(prefs.getString('user_id') ?? '0') ?? 0;
+    final role = (prefs.getString('role') ?? 'user').trim().isEmpty
+        ? 'user'
+        : (prefs.getString('role') ?? 'user').trim();
+    int userId = int.tryParse(prefs.getString('user_id') ?? '0') ?? 0;
+    if (userId == 0) {
+      try {
+        final profile = await getProfile();
+        userId = int.tryParse(
+              profile['id']?.toString() ??
+                  profile['user']?['id']?.toString() ??
+                  '0',
+            ) ??
+            0;
+      } catch (_) {}
+    }
     if (userId == 0) return;
 
-    await http.post(
-      Uri.parse('$baseUrl/notifications/notifications.php'),
+    final endpoint = Uri.parse('$baseUrl/notifications/notifications.php');
+
+    final jsonResponse = await http.post(
+      endpoint,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -1267,17 +1571,48 @@ class ApiService {
         'notification_id': notificationId,
       }),
     );
+
+    if (jsonResponse.statusCode == 200) return;
+
+    await http.post(
+      endpoint,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Bearer $token',
+      },
+      body: {
+        'action': 'mark_read',
+        'user_id': userId.toString(),
+        'role': role,
+        'notification_id': notificationId,
+      },
+    );
   }
 
   static Future<void> markAllNotificationsRead() async {
     final prefs = await SharedPreferences.getInstance();
     final token  = prefs.getString('token') ?? '';
-    final role   = prefs.getString('role') ?? 'user';
-    final userId = int.tryParse(prefs.getString('user_id') ?? '0') ?? 0;
+    final role = (prefs.getString('role') ?? 'user').trim().isEmpty
+        ? 'user'
+        : (prefs.getString('role') ?? 'user').trim();
+    int userId = int.tryParse(prefs.getString('user_id') ?? '0') ?? 0;
+    if (userId == 0) {
+      try {
+        final profile = await getProfile();
+        userId = int.tryParse(
+              profile['id']?.toString() ??
+                  profile['user']?['id']?.toString() ??
+                  '0',
+            ) ??
+            0;
+      } catch (_) {}
+    }
     if (userId == 0) return;
 
-    await http.post(
-      Uri.parse('$baseUrl/notifications/notifications.php'),
+    final endpoint = Uri.parse('$baseUrl/notifications/notifications.php');
+
+    final jsonResponse = await http.post(
+      endpoint,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -1287,6 +1622,21 @@ class ApiService {
         'user_id': userId,
         'role':    role,
       }),
+    );
+
+    if (jsonResponse.statusCode == 200) return;
+
+    await http.post(
+      endpoint,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Bearer $token',
+      },
+      body: {
+        'action': 'mark_all_read',
+        'user_id': userId.toString(),
+        'role': role,
+      },
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:go_router/go_router.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
@@ -12,8 +13,12 @@ import 'screens/dealer/dealer_identity_verification_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/notifications_screen.dart';
+import 'screens/public_notifications_screen.dart';
+import 'services/notification_service.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.initialize();
   runApp(const HouseRentApp());
 }
 
@@ -31,6 +36,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/notifications',
       builder: (context, state) => const NotificationsScreen(),
+    ),
+    GoRoute(
+      path: '/public-notifications',
+      builder: (context, state) => const PublicNotificationsScreen(),
     ),
     GoRoute(
       path: '/property/:id',
@@ -84,8 +93,35 @@ final GoRouter _router = GoRouter(
   ],
 );
 
-class HouseRentApp extends StatelessWidget {
+class HouseRentApp extends StatefulWidget {
   const HouseRentApp({super.key});
+
+  @override
+  State<HouseRentApp> createState() => _HouseRentAppState();
+}
+
+class _HouseRentAppState extends State<HouseRentApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    NotificationService.startForegroundPolling();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(NotificationService.forceCheckNow());
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    NotificationService.stopForegroundPolling();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
