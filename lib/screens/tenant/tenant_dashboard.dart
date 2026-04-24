@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../../services/api_service.dart';
 import '../../utils/app_error.dart';
 import '../../widgets/skeleton_loader.dart';
@@ -709,6 +711,7 @@ class _TenantPaymentsTab extends StatefulWidget {
 
 class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
   List<dynamic> _payments = [];
+  List<dynamic> _premiumContacts = [];
   bool _isLoading = true;
   String? _selectedProofImagePath;
 
@@ -721,9 +724,32 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
   Future<void> _loadPayments() async {
     try {
       final data = await ApiService.fetchTenantDashboardData();
+      
+      // Fetch Premium Contact History directly from dashboard to avoid touching api_service heavily
+      List<dynamic> premiumData = [];
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final profile = await ApiService.getProfile();
+        final userId = profile['id']?.toString() ?? '';
+        final response = await http.post(
+          Uri.parse('${ApiService.baseUrl}/tenant_contact_payment.php'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'action': 'history', 'user_id': userId}),
+        );
+        if (response.statusCode == 200) {
+          final decoded = jsonDecode(response.body);
+          if (decoded['status'] == 'success') {
+            premiumData = decoded['data'] ?? [];
+          }
+        }
+      } catch (pe) {
+        // Suppressed premium contacts fetch error
+      }
+
       if (mounted) {
         setState(() {
           _payments = data['payment_history'] ?? [];
+          _premiumContacts = premiumData;
           _isLoading = false;
         });
       }
@@ -1107,79 +1133,166 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
             ],
           ),
           const SizedBox(height: 24),
-          if (_payments.isEmpty)
-            const Expanded(
-              child: Center(
-                child: Text('No payment history found.', style: TextStyle(fontSize: 18, color: Colors.black54)),
-              ),
-            )
-          else
-            Expanded(
-              child: ListView.builder(
-                itemCount: _payments.length,
-                itemBuilder: (context, index) {
-                  final payment = _payments[index];
-                  final status = payment['status'] ?? 'pending';
-                  
-                  Color statusColor = Colors.orange;
-                  if (status == 'approved') statusColor = Colors.green;
-                  if (status == 'rejected') statusColor = Colors.red;
+          
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_premiumContacts.isNotEmpty) ...[
+                    const Text('Premium Contact Access (One-Time)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _premiumContacts.length,
+                      itemBuilder: (context, index) {
+                        final premium = _premiumContacts[index];
+                        final status = premium['status'] ?? 'pending';
+                        
+                        Color statusColor = Colors.orange;
+                        if (status == 'active' || status == 'successful') statusColor = Colors.green;
+                        if (status == 'failed') statusColor = Colors.red;
 
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 2,
-                    color: Colors.white,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.receipt_long, color: Colors.blue),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 2,
+                          color: Colors.white,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Row(
                               children: [
-                                Text(payment['property_title'] ?? 'Property Rent', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                const SizedBox(height: 4),
-                                Text('Month: ${payment['month_year'] ?? 'N/A'} • Method: ${payment['payment_method'] ?? 'N/A'}', style: const TextStyle(color: Colors.black54, fontSize: 13)),
-                                const SizedBox(height: 4),
-                                Text('Date: ${payment['created_at']?.substring(0, 10) ?? 'N/A'}', style: const TextStyle(color: Colors.black54, fontSize: 12)),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.shade50,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.star, color: Colors.amber),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('Tenant Pro Access', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                      const SizedBox(height: 4),
+                                      Text('Method: ${premium['payment_type'] ?? 'N/A'} ${premium['operator'] != null ? '(${premium['operator']})' : ''}', style: const TextStyle(color: Colors.black54, fontSize: 13)),
+                                      const SizedBox(height: 4),
+                                      Text('Date: ${premium['created_at']?.substring(0, 10) ?? 'N/A'}', style: const TextStyle(color: Colors.black54, fontSize: 12)),
+                                    ],
+                                  ),
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text('ZMW ${premium['amount_paid'] ?? '5.00'}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: statusColor.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        status.toString().toUpperCase(),
+                                        style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 12),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
                           ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text('${payment['currency'] ?? 'ZMW'} ${payment['amount'] ?? '0.00'}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  status.toString().toUpperCase(),
-                                  style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
-                  );
-                },
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    const SizedBox(height: 24),
+                  ],
+                  
+                  const Text('Rent Payments', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  if (_payments.isEmpty)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(32.0),
+                        child: Text('No rent payment history found.', style: TextStyle(fontSize: 18, color: Colors.black54)),
+                      ),
+                    )
+                  else
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _payments.length,
+                      itemBuilder: (context, index) {
+                        final payment = _payments[index];
+                        final status = payment['status'] ?? 'pending';
+                        
+                        Color statusColor = Colors.orange;
+                        if (status == 'approved') statusColor = Colors.green;
+                        if (status == 'rejected') statusColor = Colors.red;
+
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 2,
+                          color: Colors.white,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade50,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.receipt_long, color: Colors.blue),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(payment['property_title'] ?? 'Property Rent', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                      const SizedBox(height: 4),
+                                      Text('Month: ${payment['month_year'] ?? 'N/A'} • Method: ${payment['payment_method'] ?? 'N/A'}', style: const TextStyle(color: Colors.black54, fontSize: 13)),
+                                      const SizedBox(height: 4),
+                                      Text('Date: ${payment['created_at']?.substring(0, 10) ?? 'N/A'}', style: const TextStyle(color: Colors.black54, fontSize: 12)),
+                                    ],
+                                  ),
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text('${payment['currency'] ?? 'ZMW'} ${payment['amount'] ?? '0.00'}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: statusColor.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        status.toString().toUpperCase(),
+                                        style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                ],
               ),
             ),
+          ),
         ],
       ),
     );

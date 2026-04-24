@@ -23,7 +23,6 @@ class _DealerPaymentHistoryScreenState extends State<DealerPaymentHistoryScreen>
     try {
       // Fetch dealer-specific payment history from their own endpoint
       final response = await ApiService.fetchPaymentHistory();
-      print('Payment History Raw Response: $response');
       if (mounted) {
         setState(() {
           if (response is List) {
@@ -42,7 +41,6 @@ class _DealerPaymentHistoryScreenState extends State<DealerPaymentHistoryScreen>
           } else {
             _payments = [];
           }
-          print('Parsed Payments count: ${_payments.length}');
           _isLoading = false;
         });
       }

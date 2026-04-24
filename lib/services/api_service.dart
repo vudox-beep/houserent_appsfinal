@@ -532,8 +532,6 @@ class ApiService {
         }),
       );
       
-      print('Dealer Payment History Response: ${response.body}');
-      
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -553,6 +551,73 @@ class ApiService {
       } else {
         throw Exception('Failed to load payment history');
       }
+    }
+  }
+
+  static Future<Map<String, dynamic>> dealerInitiatePayment(String userId, String phone, String operator) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/dealer/payments/dealer_payments.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'action': 'initiate',
+        'user_id': userId,
+        'phone': phone,
+        'operator': operator,
+      }),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to initiate payment');
+    }
+  }
+
+  static Future<Map<String, dynamic>> dealerVerifyPayment(String userId, String reference) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/dealer/payments/dealer_payments.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'action': 'verify',
+        'user_id': userId,
+        'reference': reference,
+      }),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to verify payment');
+    }
+  }
+
+  static Future<Map<String, dynamic>> dealerGetSubscriptionStatus(String userId) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/dealer/payments/dealer_payments.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'action': 'get_status',
+        'user_id': userId,
+      }),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to get subscription status');
+    }
+  }
+
+  static Future<Map<String, dynamic>> dealerPaymentHistory(String userId) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/dealer/payments/dealer_payments.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'action': 'history',
+        'user_id': userId,
+      }),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to get payment history');
     }
   }
 
@@ -1070,9 +1135,6 @@ class ApiService {
         'user_id': userId,
       }),
     );
-
-    print('Dealer Check Status Code: ${response.statusCode}');
-    print('Dealer Check Status Response: ${response.body}');
 
     if (response.statusCode == 200) {
       try {

@@ -5,15 +5,19 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dealer/dealer_payment_webview_screen.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
 import '../services/notification_service.dart';
 import '../utils/app_error.dart';
 import '../widgets/skeleton_loader.dart';
+import 'dealer/dealer_payment_webview_screen.dart';
 
 class PropertyDetailsScreen extends StatefulWidget {
   final int propertyId;
@@ -51,6 +55,9 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
   double _selectedLandlordRating = 0;
   double _averageLandlordRating = 0;
   int _totalLandlordRatings = 0;
+  
+  bool _hasPaidContactAccess = false;
+  bool _isCheckingContactAccess = false;
 
   bool _isServiceType(String typeLower) {
     return typeLower.contains('wedding') ||
@@ -145,6 +152,13 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
           });
           _checkFavoriteStatus();
           _loadLandlordRatingSummary();
+          if (_userRole != 'dealer' && _userRole != 'admin') {
+            _checkContactAccessStatus();
+          } else {
+            setState(() {
+              _hasPaidContactAccess = true; // Dealers/admins don't pay
+            });
+          }
         }
       } catch (e) {
         if (mounted) {
@@ -164,6 +178,217 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
         _isSaved = isSaved;
       });
     }
+  }
+
+  Future<void> _checkContactAccessStatus() async {
+    if (!_isLoggedIn || _currentUserId.isEmpty) return;
+    
+    setState(() {
+      _isCheckingContactAccess = true;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse('https://houseforrent.site/api/tenant_contact_payment.php'),
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: {
+          'action': 'get_status',
+          'user_id': _currentUserId,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'success' && data['has_paid'] == true) {
+          if (mounted) {
+            setState(() {
+              _hasPaidContactAccess = true;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error checking contact access: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCheckingContactAccess = false;
+        });
+      }
+    }
+  }
+
+  String _normalizeZmPhone(String input) {
+    var cleaned = input.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (cleaned.startsWith('00')) {
+      cleaned = cleaned.substring(2);
+    }
+    
+    if (cleaned.length == 12 && cleaned.startsWith('260')) {
+      return cleaned;
+    }
+
+    if (cleaned.startsWith('0') && cleaned.length == 10) {
+      cleaned = '260${cleaned.substring(1)}';
+    } else if (cleaned.length == 9 && (cleaned.startsWith('9') || cleaned.startsWith('7') || cleaned.startsWith('5'))) {
+      cleaned = '260$cleaned';
+    }
+
+    return cleaned;
+  }
+
+  bool _isValidZmPhone(String input) {
+    final normalized = _normalizeZmPhone(input);
+    return RegExp(r'^260(9|7|5)\d{8}$').hasMatch(normalized);
+  }
+
+  Future<Map<String, dynamic>> _tenantPaymentRequest({
+    required String action,
+    required String userId,
+    Map<String, dynamic>? extra,
+  }) async {
+    final url = 'https://houseforrent.site/api/tenant_contact_payment.php';
+    final body = <String, dynamic>{
+      'action': action,
+      'user_id': userId,
+      ...?extra,
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: const {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return {
+          'status': 'error',
+          'message': 'Server error (${response.statusCode})',
+        };
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Network error occurred'};
+    }
+
+    return {'status': 'error', 'message': 'Invalid server response'};
+  }
+
+  Future<void> _showContactAccessPrompt(VoidCallback onPaidSuccess) async {
+    final bool? proceed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Premium Contact Access', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF3CD),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFFC107)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.star, color: Color(0xFFFFC107)),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text('One-time fee: ZMW 5.00', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text('Unlock direct contact details for all listings and get premium features forever!'),
+            const SizedBox(height: 12),
+            _buildBenefitRow('Direct Call & WhatsApp Access'),
+            _buildBenefitRow('Early updates of new listings'),
+            _buildBenefitRow('Premium call services'),
+            _buildBenefitRow('Pay once for this account, access forever'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.black54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFFC107),
+              foregroundColor: Colors.black87,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              _isLoggedIn ? 'Pay Now' : 'Login to Pay', 
+              style: const TextStyle(fontWeight: FontWeight.bold)
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (proceed == true) {
+      if (!_isLoggedIn) {
+        if (!mounted) return;
+        // Navigate to login and wait for result
+        await context.push('/login');
+        
+        // When they return, check if they are now logged in
+        if (!mounted) return;
+        await _checkLoginStatus();
+        
+        // If still not logged in, just abort
+        if (!_isLoggedIn) return;
+      }
+
+      if (!mounted) return;
+      final profile = await ApiService.getProfile();
+      final phone = profile['phone']?.toString() ?? '';
+      final email = profile['email']?.toString() ?? '';
+      final name = profile['name']?.toString() ?? '';
+      
+      if (!mounted) return;
+      
+      final url = 'https://houseforrent.site/api/tenant_contact_payment.php?action=pay_page&user_id=$_currentUserId&phone=${Uri.encodeComponent(phone)}&email=${Uri.encodeComponent(email)}&name=${Uri.encodeComponent(name)}';
+      
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => DealerPaymentWebviewScreen(
+            url: url,
+          ),
+        ),
+      ).then((_) async {
+        if (mounted) {
+          await _checkContactAccessStatus();
+          if (_hasPaidContactAccess) {
+            onPaidSuccess();
+          }
+        }
+      });
+    }
+  }
+
+  Widget _buildBenefitRow(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle, color: Colors.green, size: 18),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 14))),
+        ],
+      ),
+    );
   }
 
   Future<void> _toggleFavorite() async {
@@ -1420,8 +1645,15 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
                                     height: 50,
                                     child: ElevatedButton.icon(
                                       onPressed: () {
-                                        final dealerPhone = _property!['dealer_phone']?.toString() ?? _property!['dealer']?['phone']?.toString() ?? '';
-                                        _makePhoneCall(dealerPhone);
+                                        if (!_hasPaidContactAccess) {
+                                          _showContactAccessPrompt(() {
+                                            final dealerPhone = _property!['dealer_phone']?.toString() ?? _property!['dealer']?['phone']?.toString() ?? '';
+                                            _makePhoneCall(dealerPhone);
+                                          });
+                                        } else {
+                                          final dealerPhone = _property!['dealer_phone']?.toString() ?? _property!['dealer']?['phone']?.toString() ?? '';
+                                          _makePhoneCall(dealerPhone);
+                                        }
                                       },
                                       icon: const Icon(Icons.phone, size: 20),
                                       label: const Text('Call', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -1440,8 +1672,15 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
                                     height: 50,
                                     child: ElevatedButton.icon(
                                       onPressed: () {
-                                        final dealerPhone = _property!['dealer_phone']?.toString() ?? _property!['dealer']?['phone']?.toString() ?? '';
-                                        _openWhatsApp(dealerPhone);
+                                        if (!_hasPaidContactAccess) {
+                                          _showContactAccessPrompt(() {
+                                            final dealerPhone = _property!['dealer_phone']?.toString() ?? _property!['dealer']?['phone']?.toString() ?? '';
+                                            _openWhatsApp(dealerPhone);
+                                          });
+                                        } else {
+                                          final dealerPhone = _property!['dealer_phone']?.toString() ?? _property!['dealer']?['phone']?.toString() ?? '';
+                                          _openWhatsApp(dealerPhone);
+                                        }
                                       },
                                       icon: const Icon(Icons.chat, size: 20), // generic chat icon representing whatsapp
                                       label: const Text('WhatsApp', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),

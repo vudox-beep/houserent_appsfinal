@@ -90,9 +90,8 @@ class _DealerDashboardState extends State<DealerDashboard> {
         } else if (paymentRes is Map && paymentRes['payments'] is List) {
           parsedRecentPayments = (paymentRes['payments'] as List).take(5).toList();
         }
-        debugPrint('Dashboard Parsed Payments count: ${parsedRecentPayments.length}');
       } catch (e) {
-        debugPrint('Failed to load recent payments: $e');
+        // suppressed
       }
 
       if (mounted) {
@@ -673,8 +672,6 @@ class _DealerDashboardState extends State<DealerDashboard> {
       recentPayments = _dealerStatus!['recent_payments'] as List<dynamic>;
     }
     
-    debugPrint('Building overview with ${recentPayments.length} recent payments');
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -830,7 +827,6 @@ class _DealerDashboardState extends State<DealerDashboard> {
                 const Divider(height: 1),
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    debugPrint('Rendering DataTable with ${recentPayments.length} payments');
                     return SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: ConstrainedBox(

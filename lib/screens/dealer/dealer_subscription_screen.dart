@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../../services/api_service.dart';
+import 'dealer_payment_webview_screen.dart';
 
 class DealerSubscriptionScreen extends StatefulWidget {
   const DealerSubscriptionScreen({super.key});
@@ -9,6 +12,9 @@ class DealerSubscriptionScreen extends StatefulWidget {
 }
 
 class _DealerSubscriptionScreenState extends State<DealerSubscriptionScreen> {
+  static const String _dealerPaymentUrl =
+      'https://houseforrent.site/api/dealer_payment.php';
+
   Map<String, dynamic>? _subscription;
   bool _isLoading = true;
 
@@ -20,129 +26,73 @@ class _DealerSubscriptionScreenState extends State<DealerSubscriptionScreen> {
 
   Future<void> _loadSubscription() async {
     try {
-      final sub = await ApiService.fetchDealerSubscription();
+      final profile = await ApiService.getProfile();
+      final userId = profile['id']?.toString() ?? '';
+      final sub = await _dealerPaymentRequest(
+        action: 'get_status',
+        userId: userId,
+      );
+      if (!mounted) return;
       setState(() {
         _subscription = sub;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
-      // Handle error gracefully
     }
   }
 
-  Future<void> _handleUpgrade() async {
-    final profile = await ApiService.getProfile();
-    final userId = profile['id']?.toString() ?? '';
-    final phone = profile['phone']?.toString() ?? '';
+  Future<Map<String, dynamic>> _dealerPaymentRequest({
+    required String action,
+    required String userId,
+    Map<String, dynamic>? extra,
+  }) async {
+    final body = <String, dynamic>{
+      'action': action,
+      'user_id': userId,
+      ...?extra,
+    };
 
-    if (userId.isEmpty) return;
-
-    // Show operator selection dialog
-    String selectedOperator = 'mtn';
-    
-    if (!mounted) return;
-    
-    final bool? proceed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        String tempOperator = 'mtn';
-        return StatefulBuilder(
-          builder: (context, setStateDialog) => AlertDialog(
-            title: const Text('Complete Payment'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Amount: ZMW 20.00', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                const SizedBox(height: 16),
-                const Text('Select Mobile Network:'),
-                DropdownButton<String>(
-                  value: tempOperator,
-                  isExpanded: true,
-                  items: const [
-                    DropdownMenuItem(value: 'mtn', child: Text('MTN Mobile Money')),
-                    DropdownMenuItem(value: 'airtel', child: Text('Airtel Money')),
-                    DropdownMenuItem(value: 'zamtel', child: Text('Zamtel Kwacha')),
-                  ],
-                  onChanged: (val) {
-                    setStateDialog(() => tempOperator = val!);
-                    selectedOperator = val!;
-                  },
-                ),
-                const SizedBox(height: 16),
-                Text('Phone: $phone\n(Please ensure this number is registered for mobile money)', style: const TextStyle(color: Colors.black54, fontSize: 12)),
-              ],
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFFC107)),
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Pay Now', style: TextStyle(color: Colors.black87)),
-              ),
-            ],
-          ),
-        );
-      }
+    final response = await http.post(
+      Uri.parse(_dealerPaymentUrl),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
     );
 
-    if (proceed != true) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      final initRes = await ApiService.initiateLencoPayment(userId, phone, selectedOperator);
-      
-      if (initRes['status'] == 'success') {
-        final reference = initRes['reference'];
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Payment initiated. Please check your phone for the prompt.'),
-              backgroundColor: Colors.orange,
-              duration: Duration(seconds: 10),
-            )
-          );
-        }
-
-        // Wait a bit then check status automatically (or let user click a verify button)
-        await Future.delayed(const Duration(seconds: 15));
-        
-        final verifyRes = await ApiService.verifyLencoPayment(reference);
-        if (mounted) {
-          if (verifyRes['status'] == 'success') {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Payment Successful! Subscription activated.'), backgroundColor: Colors.green)
-            );
-            _loadSubscription(); // Reload data
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(verifyRes['message'] ?? 'Payment pending or failed.'), backgroundColor: Colors.red)
-            );
-          }
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(initRes['message'] ?? 'Failed to initiate payment'), backgroundColor: Colors.red)
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error processing payment.'), backgroundColor: Colors.red)
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      return {
+        'status': 'error',
+        'message': 'Server error (${response.statusCode})',
+      };
     }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is Map<String, dynamic>) {
+      return decoded;
+    }
+
+    return {'status': 'error', 'message': 'Invalid server response'};
+  }
+  Future<void> _handleUpgrade() async {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const DealerPaymentWebviewScreen(
+          url: 'https://houseforrent.site/login',
+        ),
+      ),
+    ).then((_) {
+      // When they return from the webview, reload the subscription status
+      // just in case they paid successfully.
+      if (mounted) {
+        setState(() {
+          _isLoading = true;
+        });
+        _loadSubscription();
+      }
+    });
   }
 
   @override
@@ -263,28 +213,17 @@ class _DealerSubscriptionScreenState extends State<DealerSubscriptionScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Upgrade Plan'),
-                        content: const Text('To make a payment and upgrade your plan, please login to the HouseRent Africa website using your credentials.'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('OK', style: TextStyle(color: Color(0xFFFFC107))),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                  onPressed: _isLoading ? null : _handleUpgrade,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFFC107),
                     foregroundColor: Colors.black87,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     elevation: 0,
                   ),
-                  child: const Text('Upgrade Now', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    _isLoading ? 'Please wait...' : 'Upgrade Now',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
               )
             ],
