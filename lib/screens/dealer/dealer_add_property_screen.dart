@@ -49,10 +49,11 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
     'Studios',
     'Land for Sale',
     'Shop / Commercial',
-    'Office Space'
+    'Office Space',
+    'Zed Bine'
   ];
 
-  final List<String> _purposes = ['Rent', 'Sale', 'Service'];
+  final List<String> _purposes = ['Rent', 'Sale', 'Service', 'Auction', 'Lease'];
   
   final List<String> _amenitiesOptions = [
     'WiFi',
@@ -116,6 +117,7 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
       if (type.contains('land')) return 'Land for Sale';
       if (type.contains('shop') || type.contains('commercial')) return 'Shop / Commercial';
       if (type.contains('office')) return 'Office Space';
+      if (type == 'salon' || type == 'gadget' || type == 'other_service' || type == 'mechanic') return 'Zed Bine';
       return 'House';
     }
 
@@ -123,6 +125,8 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
       final purpose = (rawPurpose ?? '').toString().trim().toLowerCase();
       if (purpose.contains('sale') || purpose == 'sell') return 'Sale';
       if (purpose.contains('service')) return 'Service';
+      if (purpose.contains('auction')) return 'Auction';
+      if (purpose.contains('lease')) return 'Lease';
       if (purpose.contains('rent')) {
         if (propertyType == 'Wedding Lodges' || propertyType == 'Studios') {
           return 'Service';
@@ -145,6 +149,13 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
     _capacityController.text = (property['capacity'] ?? '').toString();
     _peoplePerRoomController.text = (property['people_per_room'] ?? '').toString();
     _eventTypeController.text = (property['event_type'] ?? '').toString();
+    
+    // Reverse map for Zed Bine
+    final rawType = (property['property_type'] ?? property['type'] ?? '').toString().trim().toLowerCase();
+    if (rawType == 'salon') _eventTypeController.text = 'Salon & Beauty';
+    if (rawType == 'gadget') _eventTypeController.text = 'Gadgets';
+    if (rawType == 'mechanic') _eventTypeController.text = 'Repairs';
+    if (rawType == 'other_service') _eventTypeController.text = 'Other Services';
 
     _propertyType = mapType(property['property_type'] ?? property['type']);
     _purpose = mapPurpose(property['listing_purpose'] ?? property['purpose'], _propertyType);
@@ -234,6 +245,18 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
         propertyData['catering_available'] = _cateringAvailable ? '1' : '0';
         propertyData['equipment_available'] = _equipmentAvailable ? '1' : '0';
         propertyData['size_sqm'] = _sizeController.text;
+      } else if (_propertyType == 'Zed Bine') {
+        // Map Zed Bine subcategories to actual property_type in backend
+        if (_eventTypeController.text == 'Salon & Beauty') {
+          propertyData['property_type'] = 'salon';
+        } else if (_eventTypeController.text == 'Gadgets') {
+          propertyData['property_type'] = 'gadget';
+        } else if (_eventTypeController.text == 'Repairs') {
+          propertyData['property_type'] = 'mechanic';
+        } else {
+          propertyData['property_type'] = 'other_service';
+        }
+        propertyData['listing_purpose'] = 'service'; // Always force purpose to service
       } else {
         propertyData['rooms'] = _totalRoomsController.text;
         propertyData['size_sqm'] = _sizeController.text;
@@ -394,7 +417,7 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
                                 onChanged: (val) {
                                   setState(() {
                                     _propertyType = val!;
-                                    if (_propertyType == 'Wedding Lodges' || _propertyType == 'Studios') {
+                                    if (_propertyType == 'Wedding Lodges' || _propertyType == 'Studios' || _propertyType == 'Zed Bine') {
                                       _purpose = 'Service';
                                     } else if (_purpose == 'Service') {
                                       _purpose = 'Rent';
@@ -426,7 +449,7 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
                                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                 ),
                                 items: _purposes.map((p) => DropdownMenuItem(value: p, child: Text(p, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)))).toList(),
-                                onChanged: (_propertyType == 'Wedding Lodges' || _propertyType == 'Studios') 
+                                onChanged: (_propertyType == 'Wedding Lodges' || _propertyType == 'Studios' || _propertyType == 'Zed Bine') 
                                   ? null 
                                   : (val) => setState(() => _purpose = val!),
                               ),
@@ -595,6 +618,25 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
                             onChanged: (val) => setState(() => _equipmentAvailable = val ?? false),
                             contentPadding: EdgeInsets.zero,
                             controlAffinity: ListTileControlAffinity.leading,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                  ] else if (_propertyType == 'Zed Bine') ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            decoration: const InputDecoration(labelText: 'Service Type', border: OutlineInputBorder()),
+                            value: ['Salon & Beauty', 'Gadgets', 'Repairs', 'Other Services'].contains(_eventTypeController.text) ? _eventTypeController.text : 'Other Services',
+                            items: ['Salon & Beauty', 'Gadgets', 'Repairs', 'Other Services']
+                                .map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 14)))).toList(),
+                            onChanged: (val) {
+                              setState(() {
+                                _eventTypeController.text = val ?? 'Other Services';
+                              });
+                            },
                           ),
                         ),
                       ],

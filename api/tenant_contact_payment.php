@@ -5,6 +5,32 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 require_once '../config/config.php';
 
+// --- Rate Limiting Start ---
+$limiterPath = __DIR__ . '/../php_backend/api/includes/RateLimiter.php';
+if (file_exists($limiterPath)) {
+    require_once $limiterPath;
+    $limiter = new RateLimiter(10, 60); // 10 payment-related requests per 60 seconds
+    
+    // Get Real IP to support Cloudflare/Proxies
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+        $ip = $_SERVER['HTTP_CF_CONNECTING_IP'];
+    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+        $ip = trim($ips[0]);
+    }
+
+    if (!$limiter->check($ip . '_tenant_payment')) {
+        http_response_code(429);
+        echo json_encode([
+            'status' => 'error', 
+            'message' => 'Too many requests. Please try again later.'
+        ]);
+        exit();
+    }
+}
+// --- Rate Limiting End ---
+
 // If LencoAPI is not found via include, use this embedded version
 if (!class_exists('LencoAPI')) {
     class LencoAPI { 

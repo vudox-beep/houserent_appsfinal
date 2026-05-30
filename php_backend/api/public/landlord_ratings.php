@@ -3,6 +3,33 @@ require_once '../cors.php';
 require_once '../db.php';
 require_once '../auth.php';
 
+// --- Rate Limiting Start ---
+$limiterPath = __DIR__ . '/../includes/RateLimiter.php';
+if (file_exists($limiterPath)) {
+    require_once $limiterPath;
+    // Max 10 rating-related requests per 60 seconds
+    $limiter = new RateLimiter(10, 60); 
+    
+    // Get Real IP to support Cloudflare/Proxies
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+        $ip = $_SERVER['HTTP_CF_CONNECTING_IP'];
+    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+        $ip = trim($ips[0]);
+    }
+
+    if (!$limiter->check($ip . '_landlord_ratings')) {
+        http_response_code(429);
+        echo json_encode([
+            'status' => 'error', 
+            'message' => 'Too many requests. Please try again later.'
+        ]);
+        exit();
+    }
+}
+// --- Rate Limiting End ---
+
 function rating_summary(PDO $conn, int $dealerId, ?int $propertyId = null, ?int $userId = null): array {
     $params = [$dealerId];
     $where = "dealer_id = ?";

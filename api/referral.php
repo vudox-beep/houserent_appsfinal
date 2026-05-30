@@ -7,7 +7,24 @@
  // Adjusted paths to reach php_backend/config
  require_once '../php_backend/config/config.php'; 
  require_once '../php_backend/config/db.php'; 
- 
+
+// --- Rate Limiting Start ---
+$limiterPath = __DIR__ . '/../php_backend/api/includes/RateLimiter.php';
+if (file_exists($limiterPath)) {
+    require_once $limiterPath;
+    $limiter = new RateLimiter(30, 60); // 30 requests per 60 seconds
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    if (!$limiter->check($ip . '_referral')) {
+        http_response_code(429);
+        echo json_encode([
+            'status' => 'error', 
+            'message' => 'Too many requests. Please try again later.'
+        ]);
+        exit();
+    }
+}
+// --- Rate Limiting End ---
+
  if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { 
      http_response_code(200); 
      exit(); 

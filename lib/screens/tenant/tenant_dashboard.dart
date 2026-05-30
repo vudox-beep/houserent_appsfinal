@@ -286,6 +286,7 @@ class _TenantOverviewTabState extends State<_TenantOverviewTab> {
   List<dynamic> _rentals = [];
   List<dynamic> _payments = [];
   bool _isLoading = true;
+  bool _isPro = false;
 
   @override
   void initState() {
@@ -299,16 +300,44 @@ class _TenantOverviewTabState extends State<_TenantOverviewTab> {
       final rentals = await ApiService.fetchMyRentals();
       final payments = await ApiService.fetchPaymentHistory();
 
-      setState(() {
-        _profile = profile;
-        _rentals = rentals;
-        _payments = payments;
-        _isLoading = false;
-      });
+      bool isPro = profile['is_pro'] == true;
+      try {
+        final userId = profile['id']?.toString() ?? '';
+        if (userId.isNotEmpty) {
+          final response = await http.post(
+            Uri.parse('https://houseforrent.site/api/tenant_contact_payment.php'),
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: {
+              'action': 'get_status',
+              'user_id': userId,
+            },
+          );
+          if (response.statusCode == 200) {
+            final decoded = jsonDecode(response.body);
+            if (decoded['status'] == 'success' && decoded['has_paid'] == true) {
+              isPro = true;
+            }
+          }
+        }
+      } catch (pe) {
+        // Suppress
+      }
+
+      if (mounted) {
+        setState(() {
+          _profile = profile;
+          _rentals = rentals;
+          _payments = payments;
+          _isPro = isPro;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -332,7 +361,30 @@ class _TenantOverviewTabState extends State<_TenantOverviewTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Welcome back, $userName!', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A))),
+          Row(
+            children: [
+              Expanded(
+                child: Text('Welcome back, $userName!', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A))),
+              ),
+              if (_isPro)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFC107).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFFFC107)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.verified, size: 14, color: Color(0xFFD4A000)),
+                      SizedBox(width: 4),
+                      Text('PRO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFFD4A000))),
+                    ],
+                  ),
+                ),
+            ],
+          ),
           const SizedBox(height: 8),
           const Text('Manage your rental and payments.', style: TextStyle(fontSize: 16, color: Colors.black54)),
           const SizedBox(height: 24),
@@ -728,13 +780,15 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
       // Fetch Premium Contact History directly from dashboard to avoid touching api_service heavily
       List<dynamic> premiumData = [];
       try {
-        final prefs = await SharedPreferences.getInstance();
         final profile = await ApiService.getProfile();
         final userId = profile['id']?.toString() ?? '';
         final response = await http.post(
-          Uri.parse('${ApiService.baseUrl}/tenant_contact_payment.php'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'action': 'history', 'user_id': userId}),
+          Uri.parse('https://houseforrent.site/api/tenant_contact_payment.php'),
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: {
+            'action': 'history',
+            'user_id': userId,
+          },
         );
         if (response.statusCode == 200) {
           final decoded = jsonDecode(response.body);
@@ -1151,7 +1205,7 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
                         final status = premium['status'] ?? 'pending';
                         
                         Color statusColor = Colors.orange;
-                        if (status == 'active' || status == 'successful') statusColor = Colors.green;
+                        if (status == 'active' || status == 'successful' || status == 'approved' || status == 'completed') statusColor = Colors.green;
                         if (status == 'failed') statusColor = Colors.red;
 
                         return Card(
@@ -1472,6 +1526,7 @@ class _TenantProfileTabState extends State<_TenantProfileTab> {
 
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isPro = false;
   String? _errorMessage;
 
   @override
@@ -1483,11 +1538,37 @@ class _TenantProfileTabState extends State<_TenantProfileTab> {
   Future<void> _fetchProfile() async {
     try {
       final data = await ApiService.getProfile();
+      
+      bool isPro = data['is_pro'] == true;
+      try {
+        final userId = data['id']?.toString() ?? '';
+        
+        if (userId.isNotEmpty) {
+          final response = await http.post(
+            Uri.parse('https://houseforrent.site/api/tenant_contact_payment.php'),
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: {
+              'action': 'get_status',
+              'user_id': userId,
+            },
+          );
+          if (response.statusCode == 200) {
+            final decoded = jsonDecode(response.body);
+            if (decoded['status'] == 'success' && decoded['has_paid'] == true) {
+              isPro = true;
+            }
+          }
+        }
+      } catch (pe) {
+        // Suppress
+      }
+
       if (mounted) {
         setState(() {
           _nameController.text = data['name']?.toString() ?? '';
           _emailController.text = data['email']?.toString() ?? '';
           _phoneController.text = data['phone']?.toString() ?? '';
+          _isPro = isPro;
           _isLoading = false;
         });
       }
@@ -1559,8 +1640,9 @@ class _TenantProfileTabState extends State<_TenantProfileTab> {
           child: Form(
             key: _formKey,
             child: Container(
-              width: 600,
-              padding: const EdgeInsets.all(32),
+              constraints: const BoxConstraints(maxWidth: 600),
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
@@ -1576,7 +1658,53 @@ class _TenantProfileTabState extends State<_TenantProfileTab> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Profile Settings', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Profile Settings', 
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      if (_isPro)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFC107).withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFFFC107)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.verified, size: 16, color: Color(0xFFD4A000)),
+                              SizedBox(width: 4),
+                              Text('PRO', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFD4A000))),
+                            ],
+                          ),
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.lock_outline, size: 16, color: Colors.grey.shade600),
+                              const SizedBox(width: 4),
+                              Text('Unlock Pro', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey.shade600)),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
                   const SizedBox(height: 32),
                   Center(
                     child: Stack(

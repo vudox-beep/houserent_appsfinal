@@ -378,7 +378,7 @@ class _DealerPropertiesScreenState extends State<DealerPropertiesScreen> {
 
   Widget _buildStatusToggleAction(dynamic property) {
     final status = (property['status'] ?? 'available').toString().toLowerCase();
-    final isTaken = status == 'taken';
+    final isTaken = ['taken', 'rented', 'sold'].contains(status);
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: isTaken ? Colors.green.shade300 : Colors.orange.shade300),
@@ -401,7 +401,7 @@ class _DealerPropertiesScreenState extends State<DealerPropertiesScreen> {
     if (propertyId == null) return;
     
     final currentStatus = (property['status'] ?? 'available').toString().toLowerCase();
-    final newStatus = currentStatus == 'taken' ? 'available' : 'taken';
+    final newStatus = ['taken', 'rented', 'sold'].contains(currentStatus) ? 'available' : 'taken';
     
     try {
       final response = await ApiService.updatePropertyStatus(propertyId, newStatus);

@@ -27,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   String _appVersionLabel = 'Version --';
   int _publicNotifBadgeCount = 0;
+  int _houseHuntBadgeCount = 0;
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -37,6 +38,15 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadAppVersion();
     _loadPublicNotificationBadgeCount();
     _refreshPublicNotificationBadgeCount();
+    _loadHouseHuntBadgeCount();
+  }
+
+  Future<void> _loadHouseHuntBadgeCount() async {
+    final count = await ApiService.fetchTenantRequestsCount();
+    if (!mounted) return;
+    setState(() {
+      _houseHuntBadgeCount = count;
+    });
   }
 
   Future<void> _loadPublicNotificationBadgeCount() async {
@@ -72,7 +82,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // Hide properties whose dealer subscription is inactive/expired (defensive frontend filter).
       final now = DateTime.now();
+      final zedBineTypes = ['salon', 'gadget', 'mechanic', 'other_service'];
+      
       final filtered = properties.where((p) {
+        final type = (p['property_type'] ?? p['type'] ?? '').toString().toLowerCase();
+        
+        // Filter out Zed Bine properties from the home screen
+        if (zedBineTypes.contains(type)) return false;
+
         final status = (p['dealer_subscription_status'] ?? p['subscription_status'] ?? p['dealer_status'] ?? '').toString().toLowerCase();
         final expiryRaw = p['dealer_subscription_expiry'] ?? p['subscription_expiry'];
         DateTime? expiry;
@@ -180,19 +197,20 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           'Login Required',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
         ),
         content: const Text(
           'Please login to view and save your favorite properties.',
-          style: TextStyle(height: 1.4),
+          style: TextStyle(height: 1.4, color: Colors.black54),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Not now'),
+            child: const Text('Not now', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -202,8 +220,9 @@ class _HomeScreenState extends State<HomeScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFFC107),
               foregroundColor: Colors.black87,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Login'),
+            child: const Text('Login', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -211,8 +230,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onItemTapped(int index) {
-    print("Nav tapped: index $index, loggedIn: $_isLoggedIn, role: $_userRole");
-
     if (index == 0) {
       // Home tab clicked
       setState(() {
@@ -222,12 +239,9 @@ class _HomeScreenState extends State<HomeScreen> {
       // Saved clicked
       if (_isLoggedIn) {
         if (_userRole == 'tenant' || _userRole == 'user' || _userRole.isEmpty) { 
-          print("Navigating to tenant-dashboard tab 4");
           try {
             context.go('/tenant-dashboard', extra: {'tab': 4});
-          } catch (e) {
-            print("Navigation error: $e");
-          }
+          } catch (_) {}
         } else if (_userRole == 'dealer') {
           context.go('/dealer-dashboard');
         }
@@ -235,8 +249,18 @@ class _HomeScreenState extends State<HomeScreen> {
         _showLoginRequiredPopup();
       }
     } else if (index == 2) {
-      context.go('/public-notifications');
+      if (_isLoggedIn) {
+        context.go('/tenant-requests');
+      } else {
+        _showLoginRequiredPopup();
+      }
     } else if (index == 3) {
+      if (_isLoggedIn) {
+        context.go('/public-notifications');
+      } else {
+        _showLoginRequiredPopup();
+      }
+    } else if (index == 4) {
       // Profile clicked
       if (_isLoggedIn) {
         if (_userRole == 'dealer') {
@@ -291,6 +315,47 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final badgeText =
         _publicNotifBadgeCount > 99 ? '99+' : _publicNotifBadgeCount.toString();
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        icon,
+        Positioned(
+          right: -8,
+          top: -6,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(
+              color: Colors.red.shade600,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            constraints: const BoxConstraints(minWidth: 16, minHeight: 14),
+            child: Text(
+              badgeText,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHouseHuntIcon({
+    required bool active,
+    Color? iconColor,
+  }) {
+    final icon = Icon(
+      active ? Icons.campaign : Icons.campaign_outlined,
+      color: iconColor,
+    );
+    if (_houseHuntBadgeCount <= 0) return icon;
+
+    final badgeText =
+        _houseHuntBadgeCount > 99 ? '99+' : _houseHuntBadgeCount.toString();
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -533,7 +598,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     height: 54, // Slightly taller for better touch target
                     child: Builder(
                       builder: (context) {
-                        final categories = ['For Rent', 'For Sale', 'Boarding Houses', 'Apartment', 'Wedding Lodges', 'Studios', 'Land for Sale'];
+                        final categories = ['Zed Bine', 'For Rent', 'For Sale', 'Boarding Houses', 'Apartment', 'Wedding Lodges', 'Studios', 'Land for Sale'];
                         
                         // Optionally merge with dynamically found categories if needed
                         final dynamicCats = _properties
@@ -552,6 +617,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             final label = categories[index];
                             return InkWell(
                               onTap: () {
+                                if (label == 'Zed Bine') {
+                                  context.push('/zed-bine');
+                                  return;
+                                }
                                 String paramType = '';
                                 String paramPurpose = '';
                                 
@@ -600,11 +669,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        const Icon(Icons.category_outlined, size: 16, color: Colors.white),
+                                        if (label == 'Zed Bine')
+                                          const Icon(Icons.handyman, size: 16, color: Color(0xFFFFC107))
+                                        else
+                                          const Icon(Icons.category_outlined, size: 16, color: Colors.white),
                                         const SizedBox(width: 8),
                                         Text(
                                           label,
-                                          style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 14),
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600, 
+                                            color: label == 'Zed Bine' ? const Color(0xFFFFC107) : Colors.white, 
+                                            fontSize: 14
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -621,9 +697,80 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             
+            // Video Walkthrough CTA (compact, close to listings)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF121212), Color(0xFF2B2B2B)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFC107).withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.ondemand_video,
+                      color: Color(0xFFFFC107),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'House Reels',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14.5,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Watch listings in short videos',
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () => context.push('/video-walkthroughs'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFFC107),
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      minimumSize: const Size(0, 34),
+                    ),
+                    icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                    label: const Text('Watch'),
+                  ),
+                ],
+              ),
+            ),
+
             // Featured Properties Section
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24.0),
+              padding: const EdgeInsets.fromLTRB(0, 12, 0, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -939,7 +1086,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
               },
               child: Container(
-                margin: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
@@ -993,6 +1140,75 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white),
                   ],
+                ),
+              ),
+            ),
+
+            // Report Fake Listing Banner
+            GestureDetector(
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Contact support to report a listing.')),
+                );
+              },
+              child: Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(20.0),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: Colors.white,
+                    border: Border.all(color: Colors.red.shade100, width: 1.5),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.gpp_bad_outlined, size: 28, color: Colors.red),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Protect Our Community',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Spotted a fake listing or scammer? Report them immediately.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade700,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.red),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1051,6 +1267,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.favorite_border),
             activeIcon: Icon(Icons.favorite),
             label: 'Saved',
+          ),
+          BottomNavigationBarItem(
+            icon: _buildHouseHuntIcon(active: false),
+            activeIcon: _buildHouseHuntIcon(active: true),
+            label: 'House Hunt',
           ),
           BottomNavigationBarItem(
             icon: _buildNotificationIcon(active: false),
@@ -1183,10 +1404,12 @@ class PropertyCard extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Stack(
             children: [
-              // Image Section
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Image Section
               Container(
                 height: 160, // Increased image height slightly for better proportion
                 width: double.infinity,
@@ -1216,26 +1439,6 @@ class PropertyCard extends StatelessWidget {
                       ),
                     ),
                     
-                    if ((property['status']?.toString().toLowerCase() ?? '') == 'taken')
-                      Positioned(
-                        top: 12,
-                        left: 12,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade600,
-                            borderRadius: BorderRadius.circular(6),
-                            boxShadow: [
-                              BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4, offset: const Offset(0, 2))
-                            ]
-                          ),
-                          child: const Text(
-                            'TAKEN', 
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.white, letterSpacing: 0.5)
-                          ),
-                        ),
-                      ),
-
                     Positioned(
                       top: 12,
                       right: 12,
@@ -1374,6 +1577,15 @@ class PropertyCard extends StatelessWidget {
                               if (capacity.isNotEmpty && capacity != '0') const SizedBox(width: 12),
                               if (eventType.isNotEmpty) _buildProfessionalAmenity(Icons.event_outlined, eventType),
                               if (eventType.isNotEmpty) const SizedBox(width: 12),
+                            ] else if (typeLower == 'salon') ...[
+                              _buildProfessionalAmenity(Icons.face_retouching_natural, 'Salon & Beauty'),
+                              const SizedBox(width: 12),
+                            ] else if (typeLower == 'gadget' || typeLower == 'mechanic') ...[
+                              _buildProfessionalAmenity(Icons.devices, 'Repairs'),
+                              const SizedBox(width: 12),
+                            ] else if (typeLower == 'other_service') ...[
+                              _buildProfessionalAmenity(Icons.handyman, 'Service'),
+                              const SizedBox(width: 12),
                             ] else ...[
                               if (rooms.isNotEmpty && rooms != '0') _buildProfessionalAmenity(Icons.door_front_door_outlined, '$rooms Rooms'),
                               if (rooms.isNotEmpty && rooms != '0') const SizedBox(width: 12),
@@ -1386,6 +1598,40 @@ class PropertyCard extends StatelessWidget {
                   ),
                 ),
               ),
+            ],
+          ),
+          if (['taken', 'rented', 'sold'].contains(property['status']?.toString().toLowerCase() ?? ''))
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
+                      child: Container(
+                        color: Colors.white.withOpacity(0.3),
+                        alignment: Alignment.center,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade700.withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))
+                            ],
+                          ),
+                          child: Text(
+                            purposeKey == 'sale' ? 'SOLD' : 'RENTED',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -1416,12 +1662,18 @@ class PropertyCard extends StatelessWidget {
 
     if (rawPurpose.contains('sale') || rawPurpose == 'sell') return 'sale';
     if (rawPurpose.contains('service')) return 'service';
+    if (rawPurpose.contains('auction')) return 'auction';
+    if (rawPurpose.contains('lease')) return 'lease';
     if (rawPurpose.contains('rent')) {
       final bool serviceType = typeLower.contains('wedding') ||
           typeLower.contains('studio') ||
           typeLower.contains('lodge') ||
           typeLower.contains('studies') ||
-          typeLower.contains('restaurant');
+          typeLower.contains('restaurant') ||
+          typeLower == 'salon' ||
+          typeLower == 'gadget' ||
+          typeLower == 'mechanic' ||
+          typeLower == 'other_service';
       return serviceType ? 'service' : 'rent';
     }
 
@@ -1435,6 +1687,10 @@ class PropertyCard extends StatelessWidget {
         return 'FOR SALE';
       case 'service':
         return 'SERVICE';
+      case 'auction':
+        return 'AUCTION';
+      case 'lease':
+        return 'FOR LEASE';
       default:
         return 'FOR RENT';
     }
@@ -1446,6 +1702,10 @@ class PropertyCard extends StatelessWidget {
         return const Color(0xFF1E3A8A);
       case 'service':
         return const Color(0xFF6D28D9);
+      case 'auction':
+        return const Color(0xFFD97706);
+      case 'lease':
+        return const Color(0xFF059669);
       default:
         return const Color(0xFF0F766E);
     }

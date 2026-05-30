@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Apr 19, 2026 at 08:00 AM
+-- Generation Time: May 02, 2026 at 08:04 AM
 -- Server version: 11.4.10-MariaDB-cll-lve
 -- PHP Version: 8.3.30
 
@@ -1106,7 +1106,347 @@ INSERT INTO `activity_logs` (`id`, `user_id`, `user_role`, `action`, `descriptio
 (1060, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.16', '2026-04-19 09:45:45'),
 (1061, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.16', '2026-04-19 10:30:22'),
 (1062, 224, 'dealer', 'register', 'New user registered: bjambo42@gmail.com (dealer)', '41.173.23.70', '2026-04-19 10:52:14'),
-(1063, 224, 'dealer', 'login', 'User logged in successfully', '41.173.23.70', '2026-04-19 10:57:36');
+(1063, 224, 'dealer', 'login', 'User logged in successfully', '41.173.23.70', '2026-04-19 10:57:36'),
+(1064, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.16', '2026-04-19 12:20:50'),
+(1065, 2, 'admin', 'send_email', 'Sent email to user ID: 198. Subject: Property upload ', '165.58.129.16', '2026-04-19 12:23:29'),
+(1066, 2, 'admin', 'send_email', 'Sent email to user ID: 4. Subject: Welcome', '165.58.129.16', '2026-04-19 12:23:55'),
+(1067, 2, 'admin', 'send_email', 'Sent email to user ID: 4. Subject: Welcome', '165.58.129.16', '2026-04-19 12:24:27'),
+(1068, 4, 'dealer', 'login', 'User logged in successfully', '165.58.129.16', '2026-04-19 12:24:59'),
+(1069, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.16', '2026-04-19 12:48:52'),
+(1070, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.93', '2026-04-19 14:36:16'),
+(1071, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.93', '2026-04-19 16:10:34'),
+(1072, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.62', '2026-04-19 16:35:22'),
+(1073, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.62', '2026-04-19 16:52:41'),
+(1074, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.62', '2026-04-19 18:01:33'),
+(1075, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.8', '2026-04-19 19:50:04'),
+(1076, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.76', '2026-04-19 20:49:56'),
+(1077, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.29', '2026-04-19 22:22:02'),
+(1078, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.117', '2026-04-20 06:01:18'),
+(1079, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.59', '2026-04-20 09:01:44'),
+(1080, NULL, 'dealer', 'register', 'New user registered: kelvinvoicemusic@gmail.com (dealer)', '165.57.81.100', '2026-04-20 10:42:47'),
+(1081, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.59', '2026-04-20 11:33:00'),
+(1082, 2, 'admin', 'resend_verification_email', 'Resent verification email to dealer ID: 225', '165.58.129.59', '2026-04-20 11:40:09'),
+(1083, 2, 'admin', 'resend_verification_email', 'Resent verification email to dealer ID: 225', '165.58.129.59', '2026-04-20 11:41:56'),
+(1084, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.59', '2026-04-20 11:51:32'),
+(1085, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.59', '2026-04-20 12:29:09'),
+(1086, 2, 'admin', 'send_email', 'Sent email to user ID: 223. Subject: Welcome', '165.58.129.59', '2026-04-20 12:30:23'),
+(1087, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.134', '2026-04-20 13:32:08'),
+(1088, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.203', '2026-04-20 14:02:33'),
+(1089, 2, 'admin', 'send_email', 'Sent email to user ID: 225. Subject: verification', '165.57.81.235', '2026-04-20 14:26:07'),
+(1090, 4, 'dealer', 'login', 'User logged in successfully', '165.57.81.235', '2026-04-20 14:58:32'),
+(1091, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.43', '2026-04-20 15:06:54'),
+(1092, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.74', '2026-04-20 15:56:39'),
+(1093, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.74', '2026-04-20 17:16:06'),
+(1094, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.68', '2026-04-20 17:55:14'),
+(1095, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.68', '2026-04-20 18:15:09'),
+(1096, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.68', '2026-04-20 18:22:21'),
+(1097, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.68', '2026-04-20 18:54:08'),
+(1098, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.171', '2026-04-20 19:11:49'),
+(1099, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.86', '2026-04-20 19:27:12'),
+(1100, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.8', '2026-04-20 19:56:55'),
+(1101, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.41', '2026-04-20 20:20:15'),
+(1102, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.90', '2026-04-20 20:39:09'),
+(1103, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.154', '2026-04-20 21:05:31'),
+(1104, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.200', '2026-04-21 04:25:06'),
+(1105, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.120', '2026-04-21 05:43:46'),
+(1106, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.246', '2026-04-21 06:19:02'),
+(1107, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.218', '2026-04-21 06:34:45'),
+(1108, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.29', '2026-04-21 07:19:24'),
+(1109, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.58', '2026-04-21 08:08:12'),
+(1110, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.136', '2026-04-21 10:49:43'),
+(1111, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.136', '2026-04-21 11:14:22'),
+(1112, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.59', '2026-04-21 13:56:56'),
+(1113, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.59', '2026-04-21 14:22:32'),
+(1114, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.59', '2026-04-21 14:35:52'),
+(1115, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.59', '2026-04-21 15:16:23'),
+(1116, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.59', '2026-04-21 15:24:57'),
+(1117, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.50', '2026-04-21 17:41:58'),
+(1118, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.50', '2026-04-21 17:51:12'),
+(1119, 2, 'admin', 'send_email', 'Sent email to user ID: 223. Subject: Welcome', '165.56.186.50', '2026-04-21 17:52:01'),
+(1120, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.50', '2026-04-21 19:00:52'),
+(1121, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.0', '2026-04-21 20:07:30'),
+(1122, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.39', '2026-04-21 20:28:31'),
+(1123, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.104', '2026-04-21 20:44:17'),
+(1124, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.38', '2026-04-22 05:40:11'),
+(1125, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.178', '2026-04-22 05:50:16'),
+(1126, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.241', '2026-04-22 06:00:16'),
+(1127, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.70', '2026-04-22 06:50:30'),
+(1128, 226, 'user', 'register', 'New user registered: jonathanmwale711@gmail.com (user)', '45.215.255.24', '2026-04-22 07:44:01'),
+(1129, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.8', '2026-04-22 07:46:26'),
+(1130, 227, 'user', 'register', 'New user registered: rhyanmalama0@gmail.com (user)', '45.215.251.80', '2026-04-22 08:17:54'),
+(1131, 228, 'user', 'register', 'New user registered: nelsonlungu28@gmail.com (user)', '45.215.237.237', '2026-04-22 08:37:35'),
+(1132, 229, 'user', 'register', 'New user registered: arnoldbandachabdollar@gmail.com (user)', '41.223.116.252', '2026-04-22 08:39:52'),
+(1133, 229, 'user', 'login', 'User logged in successfully', '41.223.116.252', '2026-04-22 08:42:37'),
+(1134, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.174', '2026-04-22 11:04:44'),
+(1135, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.174', '2026-04-22 11:13:47'),
+(1136, 230, 'user', 'register', 'New user registered: twambonakuweza4@gmail.com (user)', '45.215.251.24', '2026-04-22 11:29:54'),
+(1137, 230, 'user', 'login', 'User logged in successfully', '45.215.251.24', '2026-04-22 11:32:03'),
+(1138, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.5', '2026-04-22 11:56:52'),
+(1139, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.249', '2026-04-22 13:20:16'),
+(1140, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.86', '2026-04-22 13:47:59'),
+(1141, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.86', '2026-04-22 14:02:29'),
+(1142, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.86', '2026-04-22 14:12:44'),
+(1143, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.86', '2026-04-22 14:19:15'),
+(1144, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.86', '2026-04-22 14:19:46'),
+(1145, 4, 'dealer', 'login', 'User logged in successfully', '165.58.129.86', '2026-04-22 14:20:02'),
+(1146, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.86', '2026-04-22 14:23:00'),
+(1147, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.179', '2026-04-22 14:49:30'),
+(1148, 232, 'user', 'register', 'New user registered: julietchola414@gmail.com (user)', '45.215.251.18', '2026-04-22 15:01:38'),
+(1149, 232, 'user', 'login', 'User logged in successfully', '45.215.251.18', '2026-04-22 15:09:48'),
+(1150, 233, 'user', 'register', 'New user registered: lynessmwanza3@gmail.com (user)', '45.215.237.159', '2026-04-22 15:11:21'),
+(1151, 233, 'user', 'login', 'User logged in successfully', '45.215.237.159', '2026-04-22 15:12:43'),
+(1152, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.192', '2026-04-22 15:21:43'),
+(1153, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.192', '2026-04-22 15:23:14'),
+(1154, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.192', '2026-04-22 15:28:20'),
+(1155, 234, 'user', 'register', 'New user registered: ngandweraymumba@gmail.com (user)', '41.216.73.21', '2026-04-22 15:36:01'),
+(1156, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.192', '2026-04-22 15:46:06'),
+(1157, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.192', '2026-04-22 16:14:54'),
+(1158, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.38', '2026-04-22 17:19:40'),
+(1159, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.38', '2026-04-22 17:32:35'),
+(1160, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.38', '2026-04-22 17:46:52'),
+(1161, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.59', '2026-04-22 18:43:03'),
+(1162, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.59', '2026-04-22 18:49:21'),
+(1163, 229, 'user', 'login', 'User logged in successfully', '41.60.179.142', '2026-04-22 18:55:33'),
+(1164, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.43', '2026-04-22 19:52:00'),
+(1165, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.43', '2026-04-22 19:54:14'),
+(1166, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.43', '2026-04-22 20:05:15'),
+(1167, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.43', '2026-04-22 20:19:22'),
+(1168, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.43', '2026-04-22 20:24:07'),
+(1169, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.79', '2026-04-22 21:10:45'),
+(1170, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.102', '2026-04-22 22:34:19'),
+(1171, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.70', '2026-04-22 22:54:10'),
+(1172, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.109', '2026-04-23 04:58:36'),
+(1173, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.182', '2026-04-23 06:43:02'),
+(1174, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.165', '2026-04-23 08:20:00'),
+(1175, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.233', '2026-04-23 10:59:01'),
+(1176, 4, 'dealer', 'login', 'User logged in successfully', '165.58.129.233', '2026-04-23 11:00:10'),
+(1177, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.80', '2026-04-23 11:02:34'),
+(1178, 4, 'dealer', 'login', 'User logged in successfully', '165.56.66.3', '2026-04-23 11:15:54'),
+(1179, 4, 'dealer', 'login', 'User logged in successfully', '165.56.66.3', '2026-04-23 11:17:38'),
+(1180, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.3', '2026-04-23 11:20:15'),
+(1181, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.192', '2026-04-23 11:32:06'),
+(1182, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.192', '2026-04-23 11:56:24'),
+(1183, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.151', '2026-04-23 12:08:35'),
+(1184, NULL, 'dealer', 'register', 'New user registered: luckchisala@gmail.com (dealer)', '165.56.186.151', '2026-04-23 12:30:26'),
+(1185, 236, 'user', 'register', 'New user registered: bandacecilia63@gmail.com (user)', '41.216.95.236', '2026-04-23 12:38:31'),
+(1186, NULL, 'dealer', 'login', 'User logged in successfully', '165.58.129.222', '2026-04-23 12:42:59'),
+(1187, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.222', '2026-04-23 12:46:12'),
+(1188, 2, 'admin', 'delete_user', 'Deleted user ID: 235', '165.58.129.222', '2026-04-23 12:46:35'),
+(1189, 237, 'user', 'register', 'New user registered: lukachongo2020@gmail.com (user)', '165.56.186.221', '2026-04-23 13:37:42'),
+(1190, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.99', '2026-04-23 13:38:22'),
+(1191, 237, 'user', 'login', 'User logged in successfully', '165.56.186.221', '2026-04-23 13:39:50'),
+(1192, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.99', '2026-04-23 13:54:47'),
+(1193, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.141', '2026-04-23 14:21:36'),
+(1194, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.141', '2026-04-23 14:42:02'),
+(1195, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.245', '2026-04-23 14:50:01'),
+(1196, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.245', '2026-04-23 14:55:19'),
+(1197, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.24', '2026-04-23 15:09:17'),
+(1198, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.24', '2026-04-23 15:21:52'),
+(1199, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.199', '2026-04-23 15:58:58'),
+(1200, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.131', '2026-04-23 16:10:14'),
+(1201, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.131', '2026-04-23 16:52:25'),
+(1202, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.24', '2026-04-23 17:23:33'),
+(1203, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.24', '2026-04-23 17:28:25'),
+(1204, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.127', '2026-04-23 20:41:46'),
+(1205, 2, 'admin', 'login', 'User logged in successfully', '45.215.236.178', '2026-04-24 05:35:07'),
+(1206, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.37', '2026-04-24 06:11:25'),
+(1207, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.78', '2026-04-24 07:52:08'),
+(1208, 238, 'user', 'register', 'New user registered: katongoinnocent27@gmail.com (user)', '41.216.82.25', '2026-04-24 12:39:11'),
+(1209, 238, 'user', 'login', 'User logged in successfully', '41.216.82.25', '2026-04-24 12:41:04'),
+(1210, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.136', '2026-04-24 13:53:13'),
+(1211, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.136', '2026-04-24 14:05:37'),
+(1212, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.211', '2026-04-24 14:12:49'),
+(1213, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.151', '2026-04-24 14:35:33'),
+(1214, 2, 'admin', 'delete_user', 'Deleted user ID: 225', '165.57.81.223', '2026-04-24 14:47:12'),
+(1215, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.223', '2026-04-24 14:57:00'),
+(1216, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.242', '2026-04-24 15:35:39'),
+(1217, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.65', '2026-04-24 15:48:59'),
+(1218, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.43', '2026-04-24 16:54:51'),
+(1219, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.163', '2026-04-24 17:23:11'),
+(1220, 239, 'user', 'register', 'New user registered: luckchisala@gmail.com (user)', '165.58.129.163', '2026-04-24 17:35:04'),
+(1221, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.163', '2026-04-24 17:54:38'),
+(1222, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.29', '2026-04-24 18:14:50'),
+(1223, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.16', '2026-04-24 18:44:13'),
+(1224, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.36', '2026-04-24 19:02:20'),
+(1225, 239, 'user', 'login', 'User logged in successfully', '165.58.129.36', '2026-04-24 19:06:57'),
+(1226, 135, 'user', 'login', 'User logged in successfully', '165.58.129.36', '2026-04-24 19:09:07'),
+(1227, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.36', '2026-04-24 19:11:53'),
+(1228, 239, 'user', 'login', 'User logged in successfully', '165.58.129.43', '2026-04-24 19:42:49'),
+(1229, 135, 'user', 'login', 'User logged in successfully', '165.58.129.207', '2026-04-24 20:12:43'),
+(1230, 239, 'user', 'login', 'User logged in successfully', '165.58.129.207', '2026-04-24 20:21:26'),
+(1231, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.94', '2026-04-24 20:24:47'),
+(1232, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.207', '2026-04-24 20:55:03'),
+(1233, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.207', '2026-04-24 21:04:01'),
+(1234, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.52', '2026-04-24 21:57:30'),
+(1235, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.39', '2026-04-25 06:19:27'),
+(1236, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.47', '2026-04-25 07:25:25'),
+(1237, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.47', '2026-04-25 07:50:05'),
+(1238, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.47', '2026-04-25 08:01:47'),
+(1239, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.47', '2026-04-25 08:21:44'),
+(1240, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.47', '2026-04-25 08:59:17'),
+(1241, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.115', '2026-04-25 09:19:42'),
+(1242, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.115', '2026-04-25 09:54:05'),
+(1243, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.115', '2026-04-25 10:19:01'),
+(1244, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.115', '2026-04-25 10:59:51'),
+(1245, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.111', '2026-04-25 11:22:29'),
+(1246, 240, 'dealer', 'register', 'New user registered: munyaradzi868@gmail.com (dealer)', '165.57.81.28', '2026-04-25 12:02:29'),
+(1247, 2, 'admin', 'update_subscription', 'Updated subscription for user ID: 240. Status: active, Expiry: ', '165.58.129.156', '2026-04-25 12:22:36'),
+(1248, 2, 'admin', 'update_subscription', 'Updated subscription for user ID: 240. Status: inactive, Expiry: ', '165.58.129.156', '2026-04-25 12:42:11'),
+(1249, 4, 'dealer', 'login', 'User logged in successfully', '165.58.129.156', '2026-04-25 12:44:57'),
+(1250, 2, 'admin', 'update_subscription', 'Updated subscription for user ID: 240. Status: active, Expiry: ', '165.58.129.156', '2026-04-25 13:06:50'),
+(1251, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.156', '2026-04-25 13:49:21'),
+(1252, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.156', '2026-04-25 14:06:02'),
+(1253, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.221', '2026-04-25 14:08:10'),
+(1254, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.221', '2026-04-25 14:11:24'),
+(1255, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.221', '2026-04-25 14:13:00'),
+(1256, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.221', '2026-04-25 15:37:12'),
+(1257, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.221', '2026-04-25 15:49:27'),
+(1258, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.193', '2026-04-25 16:22:21'),
+(1259, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.193', '2026-04-25 16:44:18'),
+(1260, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.193', '2026-04-25 16:47:49'),
+(1261, 241, 'user', 'register', 'New user registered: peteralsinal71@gmail.com (user)', '102.212.181.112', '2026-04-25 16:52:05'),
+(1262, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.193', '2026-04-25 16:59:17'),
+(1263, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.158', '2026-04-25 17:32:31'),
+(1264, 242, 'user', 'register', 'New user registered: flaviamumba03@gmail.com (user)', '102.212.183.160', '2026-04-25 17:32:50'),
+(1265, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.158', '2026-04-25 17:40:08'),
+(1266, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.158', '2026-04-25 17:51:24'),
+(1267, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.37', '2026-04-25 19:11:24'),
+(1268, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.17', '2026-04-25 19:31:16'),
+(1269, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.58', '2026-04-25 20:16:41'),
+(1270, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.202', '2026-04-25 20:33:38'),
+(1271, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.51', '2026-04-25 21:43:41'),
+(1272, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.217', '2026-04-26 05:39:00'),
+(1273, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.9', '2026-04-26 07:14:11'),
+(1274, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.137', '2026-04-26 09:30:57'),
+(1275, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.7', '2026-04-26 10:18:52'),
+(1276, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.197', '2026-04-26 11:07:37'),
+(1277, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.76', '2026-04-26 11:18:41'),
+(1278, 239, 'user', 'login', 'User logged in successfully', '165.57.81.245', '2026-04-26 11:32:33'),
+(1279, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.245', '2026-04-26 11:32:53'),
+(1280, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.226', '2026-04-26 12:16:43'),
+(1281, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.53', '2026-04-26 13:11:33'),
+(1282, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.149', '2026-04-26 13:25:21'),
+(1283, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.31', '2026-04-26 18:02:19'),
+(1284, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.31', '2026-04-26 19:34:16'),
+(1285, 243, 'user', 'register', 'New user registered: charitychisha88@gmail.com (user)', '41.223.118.43', '2026-04-26 19:58:57'),
+(1286, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.166', '2026-04-26 20:42:19'),
+(1287, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.55', '2026-04-27 06:28:38'),
+(1288, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.37', '2026-04-27 08:24:04'),
+(1289, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.88', '2026-04-27 08:34:58'),
+(1290, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.124', '2026-04-27 09:05:30'),
+(1291, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.182', '2026-04-27 09:33:52'),
+(1292, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.138', '2026-04-27 09:45:39'),
+(1293, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.66', '2026-04-27 10:22:55'),
+(1294, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.66', '2026-04-27 10:39:55'),
+(1295, 244, 'user', 'register', 'New user registered: peggymsakala@gmail.com (user)', '41.223.118.46', '2026-04-27 11:04:40'),
+(1296, 244, 'user', 'login', 'User logged in successfully', '41.223.118.46', '2026-04-27 11:06:05'),
+(1297, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.40', '2026-04-27 11:29:22'),
+(1298, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.166', '2026-04-27 12:09:29'),
+(1299, 239, 'user', 'login', 'User logged in successfully', '165.57.81.248', '2026-04-27 12:50:13'),
+(1300, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.248', '2026-04-27 12:50:55'),
+(1301, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.172', '2026-04-27 13:00:16'),
+(1302, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.199', '2026-04-27 13:28:33'),
+(1303, 4, 'dealer', 'login', 'User logged in successfully', '165.58.129.125', '2026-04-27 13:51:13'),
+(1304, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.168', '2026-04-27 15:26:39'),
+(1305, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.147', '2026-04-27 15:57:24'),
+(1306, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.147', '2026-04-27 16:13:23'),
+(1307, 245, 'user', 'register', 'New user registered: legitvsakala756@gmail.com (user)', '165.58.129.121', '2026-04-27 16:22:04'),
+(1308, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.48', '2026-04-27 16:57:17'),
+(1309, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.48', '2026-04-27 17:11:43'),
+(1310, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.221', '2026-04-27 17:57:53'),
+(1311, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.143', '2026-04-27 19:37:32'),
+(1312, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.134', '2026-04-27 20:36:40'),
+(1313, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.231', '2026-04-27 20:51:29'),
+(1314, 246, 'user', 'register', 'New user registered: kabwekatebe94@gmail.com (user)', '102.212.181.17', '2026-04-27 20:51:42'),
+(1315, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.108', '2026-04-27 22:06:59'),
+(1316, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.108', '2026-04-27 22:35:37'),
+(1317, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.242', '2026-04-28 06:05:28'),
+(1318, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.244', '2026-04-28 06:25:06'),
+(1319, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.65', '2026-04-28 06:42:30'),
+(1320, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.117', '2026-04-28 08:39:14'),
+(1321, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.62', '2026-04-28 09:54:42'),
+(1322, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.167', '2026-04-28 10:09:44'),
+(1323, 247, 'user', 'register', 'New user registered: andersonmushinka12@gmail.com (user)', '45.215.237.180', '2026-04-28 10:47:15'),
+(1324, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.223', '2026-04-28 10:55:30'),
+(1325, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.225', '2026-04-28 11:03:43'),
+(1326, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.254', '2026-04-28 11:24:15'),
+(1327, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.144', '2026-04-28 13:20:49'),
+(1328, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.134', '2026-04-28 14:47:12'),
+(1329, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.134', '2026-04-28 15:29:37'),
+(1330, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.43', '2026-04-28 16:18:30'),
+(1331, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.81', '2026-04-28 17:58:02'),
+(1332, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.201', '2026-04-28 18:25:35'),
+(1333, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.201', '2026-04-28 18:31:18'),
+(1334, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.100', '2026-04-28 18:39:09'),
+(1335, 2, 'admin', 'update_subscription', 'Updated subscription for user ID: 240. Status: active, Expiry: 2026-04-30', '165.57.81.100', '2026-04-28 18:39:34'),
+(1336, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.211', '2026-04-28 19:57:11'),
+(1337, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.211', '2026-04-28 20:59:37'),
+(1338, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.207', '2026-04-29 05:58:06'),
+(1339, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.153', '2026-04-29 06:46:41'),
+(1340, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.203', '2026-04-29 06:55:57'),
+(1341, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.180', '2026-04-29 08:05:46'),
+(1342, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.32', '2026-04-29 08:43:40'),
+(1343, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.218', '2026-04-29 10:59:35'),
+(1344, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.4', '2026-04-29 11:42:05'),
+(1345, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.194', '2026-04-29 12:59:31'),
+(1346, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.139', '2026-04-29 13:42:35'),
+(1347, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.208', '2026-04-29 14:04:03'),
+(1348, 248, 'user', 'register', 'New user registered: mr.richard.tembo@gmail.com (user)', '102.145.219.15', '2026-04-29 14:07:40'),
+(1349, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.207', '2026-04-29 14:47:12'),
+(1350, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.37', '2026-04-29 14:58:53'),
+(1351, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.115', '2026-04-29 16:00:27'),
+(1352, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.89', '2026-04-29 16:10:15'),
+(1353, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.145', '2026-04-29 18:37:23'),
+(1354, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.186', '2026-04-29 19:19:11'),
+(1355, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.83', '2026-04-29 20:12:03'),
+(1356, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.113', '2026-04-29 20:58:06'),
+(1357, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.161', '2026-04-30 06:35:33'),
+(1358, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.13', '2026-04-30 07:25:50'),
+(1359, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.119', '2026-04-30 09:48:34'),
+(1360, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.119', '2026-04-30 09:57:31'),
+(1361, 2, 'admin', 'update_subscription', 'Updated subscription for user ID: 240. Status: active, Expiry: 2026-05-30', '165.56.66.119', '2026-04-30 09:58:03'),
+(1362, 2, 'admin', 'update_subscription', 'Updated subscription for user ID: 130. Status: active, Expiry: 2026-05-21', '165.56.66.119', '2026-04-30 09:58:27'),
+(1363, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.119', '2026-04-30 10:18:58'),
+(1364, 249, 'user', 'register', 'New user registered: mweenekamfwa70@gmail.com (user)', '41.223.117.37', '2026-04-30 12:53:39'),
+(1365, 249, 'user', 'login', 'User logged in successfully', '41.223.117.37', '2026-04-30 12:54:59'),
+(1366, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.189', '2026-04-30 15:14:23'),
+(1367, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.189', '2026-04-30 16:03:05'),
+(1368, 250, 'user', 'register', 'New user registered: kasongorichard16@gmail.com (user)', '41.223.118.33', '2026-04-30 16:24:30'),
+(1369, 250, 'user', 'login', 'User logged in successfully', '41.223.118.33', '2026-04-30 16:25:42'),
+(1370, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.189', '2026-04-30 16:44:52'),
+(1371, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.179', '2026-04-30 17:57:18'),
+(1372, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.168', '2026-04-30 18:34:37'),
+(1373, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.236', '2026-04-30 19:42:15'),
+(1374, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.79', '2026-04-30 20:48:40'),
+(1375, 251, 'user', 'register', 'New user registered: timothymwanza@gmail.com (user)', '45.215.236.85', '2026-05-01 04:31:22'),
+(1376, 251, 'user', 'login', 'User logged in successfully', '45.215.236.85', '2026-05-01 04:32:25'),
+(1377, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.117', '2026-05-01 06:08:41'),
+(1378, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.220', '2026-05-01 06:26:37'),
+(1379, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.236', '2026-05-01 06:51:07'),
+(1380, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.132', '2026-05-01 07:34:36'),
+(1381, 2, 'admin', 'login', 'User logged in successfully', '165.56.66.132', '2026-05-01 07:34:37'),
+(1382, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.115', '2026-05-01 08:46:37'),
+(1383, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.115', '2026-05-01 08:55:44'),
+(1384, 2, 'admin', 'login', 'User logged in successfully', '165.57.81.162', '2026-05-01 09:23:07'),
+(1385, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.168', '2026-05-01 10:09:48'),
+(1386, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.209', '2026-05-01 10:59:29'),
+(1387, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.3', '2026-05-01 12:14:46'),
+(1388, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.142', '2026-05-01 13:17:27'),
+(1389, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.110', '2026-05-01 14:12:55'),
+(1390, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.235', '2026-05-01 15:08:29'),
+(1391, 2, 'admin', 'login', 'User logged in successfully', '45.215.224.40', '2026-05-01 17:17:45'),
+(1392, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.44', '2026-05-01 17:35:44'),
+(1393, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.184', '2026-05-01 18:12:12'),
+(1394, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.211', '2026-05-01 18:35:55'),
+(1395, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.180', '2026-05-02 05:43:47'),
+(1396, 2, 'admin', 'login', 'User logged in successfully', '165.56.186.180', '2026-05-02 06:33:31'),
+(1397, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.204', '2026-05-02 08:19:52'),
+(1398, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.124', '2026-05-02 09:12:07'),
+(1399, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.156', '2026-05-02 09:49:07'),
+(1400, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.156', '2026-05-02 09:59:47'),
+(1401, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.233', '2026-05-02 10:21:01'),
+(1402, 4, 'dealer', 'login', 'User logged in successfully', '165.58.129.233', '2026-05-02 11:25:48'),
+(1403, 2, 'admin', 'login', 'User logged in successfully', '165.58.129.233', '2026-05-02 11:42:54');
 
 -- --------------------------------------------------------
 
@@ -1150,13 +1490,13 @@ CREATE TABLE `dealers` (
 --
 
 INSERT INTO `dealers` (`user_id`, `company_name`, `office_address`, `bio`, `subscription_status`, `subscription_expiry`, `referral_earnings`, `referral_milestone_awarded`, `referral_discount_used`) VALUES
-(4, NULL, NULL, NULL, 'active', '2026-04-30 04:00:00', 15.00, 0, 0),
+(4, NULL, NULL, NULL, 'active', '2026-05-19 18:39:21', 15.00, 0, 0),
 (38, NULL, NULL, NULL, 'active', '2026-03-31 00:42:02', 0.00, 0, 0),
 (49, NULL, NULL, NULL, 'active', '2026-04-02 08:23:23', 0.00, 0, 0),
 (50, NULL, NULL, NULL, 'active', '2026-04-04 20:41:52', 0.00, 0, 0),
-(130, NULL, NULL, NULL, 'active', '2026-04-30 08:54:45', 0.00, 0, 0),
+(130, NULL, NULL, NULL, 'active', '2026-05-21 04:00:00', 0.00, 0, 0),
 (132, NULL, NULL, NULL, 'active', '2026-05-01 13:33:41', 0.00, 0, 0),
-(145, NULL, NULL, NULL, 'active', '2026-05-18 18:17:33', 0.00, 0, 0),
+(145, NULL, NULL, NULL, 'active', '2026-05-24 22:18:36', 0.00, 0, 0),
 (149, NULL, NULL, NULL, 'active', '2026-05-14 14:29:33', 0.00, 0, 0),
 (189, NULL, NULL, NULL, 'active', '2026-05-15 14:19:36', 0.00, 0, 0),
 (190, NULL, NULL, NULL, 'active', '2026-05-15 14:44:23', 0.00, 0, 0),
@@ -1165,7 +1505,8 @@ INSERT INTO `dealers` (`user_id`, `company_name`, `office_address`, `bio`, `subs
 (198, NULL, NULL, NULL, 'active', '2026-05-15 15:53:26', 0.00, 0, 0),
 (204, NULL, NULL, NULL, 'active', '2026-05-15 21:52:08', 0.00, 0, 0),
 (223, NULL, NULL, NULL, 'active', '2026-05-19 12:53:15', 0.00, 0, 0),
-(224, NULL, NULL, NULL, 'active', '2026-05-19 14:52:14', 0.00, 0, 0);
+(224, NULL, NULL, NULL, 'active', '2026-05-19 14:52:14', 0.00, 0, 0),
+(240, NULL, NULL, NULL, 'active', '2026-05-30 04:00:00', 0.00, 0, 0);
 
 -- --------------------------------------------------------
 
@@ -1204,7 +1545,8 @@ CREATE TABLE `landlord_ratings` (
 INSERT INTO `landlord_ratings` (`id`, `dealer_id`, `property_id`, `user_id`, `rating`, `review`, `created_at`, `updated_at`) VALUES
 (1, 191, 24, 4, 3, '', '2026-04-16 16:28:26', '2026-04-16 16:28:26'),
 (2, 4, 11, 135, 3, '', '2026-04-16 16:43:29', '2026-04-16 16:43:29'),
-(3, 191, 24, 135, 3, '', '2026-04-16 20:09:31', '2026-04-16 22:55:37');
+(3, 191, 24, 135, 3, '', '2026-04-16 20:09:31', '2026-04-16 22:55:37'),
+(5, 130, 34, 239, 5, '', '2026-04-26 11:30:34', '2026-04-26 11:30:47');
 
 -- --------------------------------------------------------
 
@@ -1245,7 +1587,23 @@ INSERT INTO `leads` (`id`, `property_id`, `dealer_id`, `name`, `email`, `phone`,
 (15, 20, 130, 'vjsnsm', 'chisalaluckyk5@gmail.com', '077012506', 'bxnsj', '2026-04-01 16:31:25'),
 (16, 11, 4, 'naomi', 'chisalaluckson27@gmail.com', '0000000', 'bnNz', '2026-04-03 12:19:58'),
 (17, 20, 130, 'lebeWRTIrBUqTgcidwG', 'q.og.im.iyi.3.8@gmail.com', '3830037908', 'I&#039;m interested in this property.', '2026-04-05 02:37:49'),
-(18, 9, 4, 'lOKXvszWfKSMkVKzx', 'in.ip.ew.ax.ato0.0.2@gmail.com', '6224492587', 'I&#039;m interested in this property.', '2026-04-08 12:18:59');
+(18, 9, 4, 'lOKXvszWfKSMkVKzx', 'in.ip.ew.ax.ato0.0.2@gmail.com', '6224492587', 'I&#039;m interested in this property.', '2026-04-08 12:18:59'),
+(19, 10, 4, 'ZsYyBhlRfmectRqXCLX', 'q.ewuyiru.6.2.0@gmail.com', '4465229051', 'I&#039;m interested in this property.', '2026-04-19 08:14:40'),
+(20, 34, 130, 'Innocent Katongo', 'katongoinnocent27@gmail.com', '0971446900', 'Is this house a stand alone or shared? I love it', '2026-04-24 08:33:59'),
+(21, 24, 191, 'naomi', 'luck@gmail.com', '0974251426', 'is this available', '2026-04-26 03:37:16'),
+(22, 33, 130, 'faith', 'kundafaith84@gmail.com', '0973832776', 'iam interested in this property', '2026-04-27 14:32:27'),
+(23, 34, 130, 'Andrew mwale', 'andrewmwale658@gmail.com', '0973034019', 'i interested is this house', '2026-04-29 11:56:51'),
+(24, 10, 4, 'ZAP', 'foo-bar@example.com', 'ZAP', 'I&#039;m interested in this property.', '2026-04-30 17:54:03'),
+(25, 32, 130, 'ZAP', 'foo-bar@example.com', 'ZAP', 'I&#039;m interested in this property.', '2026-04-30 17:54:04'),
+(26, 38, 240, 'ZAP', 'foo-bar@example.com', 'ZAP', 'I&#039;m interested in this property.', '2026-04-30 17:54:04'),
+(27, 33, 130, 'ZAP', 'foo-bar@example.com', 'ZAP', 'I&#039;m interested in this property.', '2026-04-30 17:54:05'),
+(28, 34, 130, 'ZAP', 'foo-bar@example.com', 'ZAP', 'I&#039;m interested in this property.', '2026-04-30 17:54:05'),
+(29, 9, 4, 'ZAP', 'foo-bar@example.com', 'ZAP', 'I&#039;m interested in this property.', '2026-04-30 17:54:05'),
+(30, 31, 130, 'ZAP', 'foo-bar@example.com', 'ZAP', 'I&#039;m interested in this property.', '2026-04-30 17:54:06'),
+(31, 11, 4, 'ZAP', 'foo-bar@example.com', 'ZAP', 'I&#039;m interested in this property.', '2026-04-30 17:54:06'),
+(32, 24, 191, 'ZAP', 'foo-bar@example.com', 'ZAP', 'I&#039;m interested in this property.', '2026-04-30 17:54:07'),
+(33, 6, 4, 'ZAP', 'foo-bar@example.com', 'ZAP', 'I&#039;m interested in this property.', '2026-04-30 17:54:07'),
+(34, 20, 130, 'ZAP', 'foo-bar@example.com', 'ZAP', 'I&#039;m interested in this property.', '2026-04-30 17:54:08');
 
 -- --------------------------------------------------------
 
@@ -1285,10 +1643,18 @@ CREATE TABLE `notifications` (
 --
 
 INSERT INTO `notifications` (`id`, `title`, `message`, `type`, `target_role`, `is_active`, `created_by`, `created_at`) VALUES
-(2, 'imporant', 'Did you know has landlord you can manage your tenants with just a single tap, click manage on the side bar', 'info', 'dealer', 1, 2, '2026-03-14 17:47:40'),
-(4, 'info', '🚨 Exciting Update from HouseRent Africa! 🏡\r\n\r\nHello everyone!\r\n\r\nWe’re happy to have you as part of the HouseRent Africa community. Our goal is to make finding and listing homes easier, faster, and more reliable for everyone.\r\n\r\nWhether you’re looking for a place to rent or you’re a landlord with property to list, HouseRent Africa is here to connect you seamlessly.\r\n\r\n✨ What you can do on the app:\r\n\r\n* Find affordable and verified rental homes\r\n* List your property بسهولة and reach more tenants\r\n* Communicate directly and securely\r\n\r\nWe’re continuously improving the platform to give you the best experience. Your feedback means everything to us—feel free to share your thoughts!\r\n\r\nThank you for trusting HouseRent Africa 💙', 'info', 'all', 1, 2, '2026-04-13 19:48:37'),
-(5, 'Landlords', 'lets upload and get tenants', 'info', 'all', 1, 2, '2026-04-16 15:15:04'),
-(10, 'HouseRent Africa', 'We happy to announce of new features on the app update app to enjoy more features, we made sure the app is optimized', 'success', 'all', 1, 2, '2026-04-16 21:50:05');
+(11, 'New Update', '🚀 Big News!\r\n\r\nYou can now refer a friend to list their property on HouseRent and earn **30% commission** when they get started!\r\n\r\nDon’t miss out on this opportunity to earn while helping others find tenants faster.\r\n\r\n👉 Refer now and start earning!', 'info', 'all', 1, 2, '2026-04-20 13:33:47'),
+(12, 'important info', '⚠️ Important Notice\r\n\r\nIf any landlord asks you to pay to view reports, please report them immediately. Viewing reports should not require any extra charges.\r\n\r\nAlso, **never share your login details with anyone**. For your safety, report anyone who asks for your account information.\r\n\r\n📞 The only official number we use is **0772125121**.\r\n\r\nStay safe and protect your account!', 'warning', 'all', 1, 2, '2026-04-20 14:03:00'),
+(13, '😀😀', 'Dear customers HouseRent wishes you a happy evening', 'info', 'all', 1, 2, '2026-04-22 14:37:02'),
+(14, '💯💯', 'New features download the new update', 'success', 'all', 1, 2, '2026-04-22 14:39:23'),
+(15, 'Invite', 'Invite landlords and get 30% bonus cash', 'info', 'all', 1, 2, '2026-04-22 14:40:08'),
+(16, '✅✅✅🫷', 'Say no to an verified agents', 'info', 'all', 1, 2, '2026-04-22 14:41:38'),
+(18, 'update', 'dealers you can use the app to make payment only K20', 'info', 'all', 1, 2, '2026-04-23 12:11:42'),
+(19, 'System improvement', '📢 Dear Users, we’ve updated the system with new and improved features to make your experience better, faster, and more convenient. The latest update includes enhancements and powerful new tools designed to improve performance and usability.\r\n\r\nUpdate your app and explore the new features today. Thank you for growing with us!', 'success', 'all', 1, 2, '2026-04-25 15:38:01'),
+(20, 'Happy', 'Salt sana', 'info', 'all', 1, 2, '2026-04-25 17:17:53'),
+(21, '🚀 HouseRent Africa Update!', 'Short video scrolling is now live 🎥🏠\r\nFind houses faster and easier than ever.\r\nUpdate your app now!', 'success', 'all', 1, 2, '2026-04-27 16:14:11'),
+(22, '🚀 New Update!', 'House hunt request for what type of house you want', 'success', 'all', 1, 2, '2026-04-28 10:13:31'),
+(23, 'Its  friday', 'wish you a happy labour day', 'info', 'all', 1, 2, '2026-05-01 08:05:19');
 
 -- --------------------------------------------------------
 
@@ -1317,7 +1683,40 @@ INSERT INTO `notification_reads` (`id`, `notification_id`, `user_id`, `read_at`)
 (12, 3, 135, '2026-04-05 14:10:08'),
 (22, 3, 47, '2026-04-09 17:57:34'),
 (23, 4, 135, '2026-04-14 14:26:22'),
-(26, 4, 4, '2026-04-14 16:58:44');
+(26, 4, 4, '2026-04-14 16:58:44'),
+(27, 19, 135, '2026-04-25 16:32:47'),
+(28, 23, 135, '2026-05-01 11:10:53'),
+(30, 22, 135, '2026-05-01 11:10:56'),
+(32, 21, 135, '2026-05-01 11:10:58'),
+(33, 20, 135, '2026-05-01 11:11:01');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `premium_contacts`
+--
+
+CREATE TABLE `premium_contacts` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `transaction_reference` varchar(255) NOT NULL,
+  `amount_paid` decimal(10,2) NOT NULL DEFAULT 5.00,
+  `lenco_reference` varchar(255) DEFAULT NULL,
+  `payment_type` varchar(50) DEFAULT NULL,
+  `operator` varchar(50) DEFAULT NULL,
+  `phone_number` varchar(20) DEFAULT NULL,
+  `account_name` varchar(255) DEFAULT NULL,
+  `operator_transaction_id` varchar(255) DEFAULT NULL,
+  `status` enum('active','inactive') DEFAULT 'active',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `premium_contacts`
+--
+
+INSERT INTO `premium_contacts` (`id`, `user_id`, `transaction_reference`, `amount_paid`, `lenco_reference`, `payment_type`, `operator`, `phone_number`, `account_name`, `operator_transaction_id`, `status`, `created_at`) VALUES
+(1, 135, 'ref-1777049407-135', 5.00, '2611408201', 'mobile-money', 'airtel', '0772125121', 'Lackson Chisala', 'MP260424.1851.Y77315', 'active', '2026-04-24 16:51:50');
 
 -- --------------------------------------------------------
 
@@ -1336,8 +1735,8 @@ CREATE TABLE `properties` (
   `bathrooms` int(11) DEFAULT NULL,
   `rooms` int(11) DEFAULT NULL,
   `size_sqm` decimal(10,2) DEFAULT NULL,
-  `property_type` enum('house','apartment','flat','boarding_house','land','commercial','wedding_venue','restaurant','lodge','studio','cottage','manor') NOT NULL DEFAULT 'house',
-  `listing_purpose` enum('rent','sale','booking','service') NOT NULL DEFAULT 'rent',
+  `property_type` enum('house','apartment','flat','boarding_house','land','commercial','wedding_venue','restaurant','lodge','studio','cottage','manor','salon','gadget','mechanic','other_service') NOT NULL DEFAULT 'house',
+  `listing_purpose` enum('rent','sale','booking','service','auction','lease') NOT NULL DEFAULT 'rent',
   `location` varchar(255) NOT NULL,
   `city` varchar(100) DEFAULT NULL,
   `country` varchar(100) DEFAULT NULL,
@@ -1356,27 +1755,29 @@ CREATE TABLE `properties` (
   `people_per_room` int(11) DEFAULT NULL,
   `event_type` varchar(255) DEFAULT NULL,
   `catering_available` tinyint(1) DEFAULT 0,
-  `equipment_available` tinyint(1) DEFAULT 0
+  `equipment_available` tinyint(1) DEFAULT 0,
+  `emails_sent` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `properties`
 --
 
-INSERT INTO `properties` (`id`, `dealer_id`, `title`, `description`, `price`, `currency`, `bedrooms`, `bathrooms`, `rooms`, `size_sqm`, `property_type`, `listing_purpose`, `location`, `city`, `country`, `latitude`, `longitude`, `status`, `verification_image`, `is_verified`, `amenities`, `video_url`, `views`, `is_featured`, `is_boosted`, `created_at`, `capacity`, `people_per_room`, `event_type`, `catering_available`, `equipment_available`) VALUES
-(6, 4, 'Chunga hill', 'Very neat ', 2500.00, 'ZMW', 3, 2, 6, 8.00, 'flat', 'rent', '257', 'Lusaka', 'Zambia', -15.37027407, 28.29425812, '', NULL, 1, '', '', 279, 1, 0, '2026-02-24 12:38:43', NULL, NULL, NULL, 0, 0),
-(7, 4, 'Chalala ', 'Very neat', 5800.00, 'ZMW', 4, 3, 10, 80.00, 'house', 'rent', 'Chalala mall', 'Chipata', 'Zambia', -15.46459998, 28.34266663, 'rented', NULL, 1, 'Wifi, solar', '', 350, 1, 0, '2026-02-24 12:40:09', NULL, NULL, NULL, 0, 0),
-(9, 4, 'Neat house ', 'This house it&amp;#039;s very neat.\r\nHas everything you need ', 8000.00, 'ZMW', 4, 2, 8, 100.00, 'house', 'rent', 'Chalala mall', 'Lusaka', 'Zambia', NULL, NULL, 'available', NULL, 1, '', '', 269, 1, 0, '2026-03-02 15:43:35', NULL, NULL, NULL, 0, 0),
-(10, 4, 'Weddings', 'Very ckean', 4800.00, 'ZMW', NULL, NULL, NULL, 8000.00, '', 'service', 'Lusaka', 'Lusaka', 'Zambia', -15.37810204, 28.32848628, 'available', NULL, 1, '', '', 156, 1, 0, '2026-03-02 23:29:41', 6000, NULL, 'Weddings', 1, 1),
-(11, 4, 'Salama', 'Bmnbvvccc', 3000.00, 'ZMW', 2, 8, 10, 7.00, 'house', 'service', 'Matero', 'Lusaka', 'Zambia', -15.37738230, 28.26143320, 'available', NULL, 1, '', '', 176, 1, 0, '2026-03-02 23:32:59', NULL, NULL, NULL, 0, 0),
-(12, 50, 'Parkview Boarding house ', '', 850.00, 'ZMW', 2, 2, 3, 0.00, 'boarding_house', 'rent', 'Parkview boarding house ', 'Lusaka', 'Zambia', -15.41746306, 28.28246176, 'available', NULL, 1, '', '', 126, 0, 0, '2026-03-05 16:48:33', NULL, 6, NULL, 0, 0),
-(13, 50, 'Parkview Boarding house ', '', 850.00, 'ZMW', 2, 2, 3, 0.00, 'boarding_house', 'rent', 'Parkview boarding house ', 'Lusaka', 'Zambia', -15.41746306, 28.28246176, 'available', NULL, 1, '', '', 109, 0, 0, '2026-03-05 16:48:33', NULL, 6, NULL, 0, 0),
-(20, 130, 'Female Boarding houses', 'Mass media female boarding hpuse.\r\n15mins walk to Unilus Pioneer \r\n15mins walk to CUZ medical campus \r\n5mins walk to UNZA\r\n2mins walk to Chreso', 1500.00, 'ZMW', 6, 4, 14, 100.00, 'boarding_house', 'service', 'Alick Nkhata Road', 'Lusaka', 'Zambia', -15.40642960, 28.32837460, 'available', NULL, 1, '', 'https://vt.tiktok.com/ZSH2CRtNQ/', 90, 0, 0, '2026-04-01 06:09:47', NULL, 4, NULL, 0, 0),
-(24, 191, '4 Bedroomed house for sale', 'HOUSE FOR SALE – EAST OF GARNETON\n✅ 4 Bedroomed House\n✅ Sitting on a 20 × 30 plot\n✅ Borehole available 💧\n📍 Located East of Garneton, Kitwe\n💰 Price: K560,000\ncall/app: 0963111800', 560000.00, 'ZMW', 4, 2, 0, 0.00, 'house', 'sale', 'East of garnaton', 'kitwe', 'Zambia', -15.38750000, 28.32280000, 'available', NULL, 1, '', '', 24, 0, 0, '2026-04-16 03:31:52', NULL, NULL, NULL, 0, 0),
-(31, 130, 'Female bed sitter ', 'Kalundu\r\n4min walk est park ', 3000.00, 'ZMW', 4, 2, 2, 50.00, 'boarding_house', 'rent', 'Kalundu', 'Lusaka', 'Zambia', -15.37915590, 28.32573900, 'available', NULL, 0, 'Water 24/7', '', 7, 0, 0, '2026-04-19 05:38:08', NULL, 2, NULL, 0, 0),
-(32, 130, 'Helen kaunda', 'K1000 to be be 4,\r\nK1200 self contained to be 4', 1000.00, 'ZMW', 8, 2, 8, 2.00, 'boarding_house', 'rent', 'Helen Kaunda', 'Lusaka', 'Zambia', -15.40441910, 28.34473380, 'available', NULL, 0, '', '', 7, 0, 0, '2026-04-19 05:52:09', NULL, 4, NULL, 0, 0),
-(33, 130, 'Kalingalinga female bh', '9mins walk to unza and chreso,\r\n25mins walk walk to unlis pioneer and cuz', 1250.00, 'ZMW', 3, 2, 4, 20.00, 'boarding_house', 'rent', 'Kalingalinga', 'Lusaka', 'Zambia', -15.40378110, 28.33012260, 'available', NULL, 0, '', '', 7, 0, 0, '2026-04-19 05:56:03', NULL, 3, NULL, 0, 0),
-(34, 130, 'Ridgeway Campus', '5mins walk to Ridgway\r\nTo be 2 lediea\r\n5mins walk to Ridgeway\r\n', 2000.00, 'ZMW', 4, 2, 4, 20.00, 'boarding_house', 'rent', 'Ridgeway', 'Lusaka', 'Zambia', -15.43308560, 28.31989400, 'available', NULL, 0, '', '', 7, 0, 0, '2026-04-19 06:03:17', NULL, 2, NULL, 0, 0);
+INSERT INTO `properties` (`id`, `dealer_id`, `title`, `description`, `price`, `currency`, `bedrooms`, `bathrooms`, `rooms`, `size_sqm`, `property_type`, `listing_purpose`, `location`, `city`, `country`, `latitude`, `longitude`, `status`, `verification_image`, `is_verified`, `amenities`, `video_url`, `views`, `is_featured`, `is_boosted`, `created_at`, `capacity`, `people_per_room`, `event_type`, `catering_available`, `equipment_available`, `emails_sent`) VALUES
+(6, 4, 'Chunga hill', 'Very neat ', 2500.00, 'ZMW', 3, 2, 6, 8.00, 'flat', 'rent', '257', 'Lusaka', 'Zambia', -15.37027407, 28.29425812, '', NULL, 1, '', '', 322, 1, 0, '2026-02-24 12:38:43', NULL, NULL, NULL, 0, 0, 0),
+(7, 4, 'Chalala ', 'Very neat', 5800.00, 'ZMW', 4, 3, 10, 80.00, 'house', 'rent', 'Chalala mall', 'Chipata', 'Zambia', -15.46459998, 28.34266663, 'rented', NULL, 1, 'Wifi, solar', '', 412, 1, 0, '2026-02-24 12:40:09', NULL, NULL, NULL, 0, 0, 0),
+(9, 4, 'Neat house ', 'This house it&amp;#039;s very neat.\r\nHas everything you need ', 8000.00, 'ZMW', 4, 2, 8, 100.00, 'house', 'rent', 'Chalala mall', 'Lusaka', 'Zambia', NULL, NULL, 'available', NULL, 1, '', '', 331, 1, 0, '2026-03-02 15:43:35', NULL, NULL, NULL, 0, 0, 0),
+(10, 4, 'Weddings', 'Very ckean', 4800.00, 'ZMW', NULL, NULL, NULL, 8000.00, '', 'service', 'Lusaka', 'Lusaka', 'Zambia', -15.37810204, 28.32848628, 'available', NULL, 1, '', '', 191, 1, 0, '2026-03-02 23:29:41', 6000, NULL, 'Weddings', 1, 1, 0),
+(11, 4, 'Salama', 'Bmnbvvccc', 3000.00, 'ZMW', 0, 0, 0, 7.00, 'house', 'service', 'Matero', 'Lusaka', 'Zambia', -15.37738230, 28.26143320, 'available', NULL, 1, 'WiFi,Parking,Security,Air Conditioning,Swimming Pool', '', 207, 1, 0, '2026-03-02 23:32:59', NULL, NULL, NULL, 0, 0, 0),
+(12, 50, 'Parkview Boarding house ', '', 850.00, 'ZMW', 2, 2, 3, 0.00, 'boarding_house', 'rent', 'Parkview boarding house ', 'Lusaka', 'Zambia', -15.41746306, 28.28246176, 'available', NULL, 1, '', '', 126, 0, 0, '2026-03-05 16:48:33', NULL, 6, NULL, 0, 0, 0),
+(13, 50, 'Parkview Boarding house ', '', 850.00, 'ZMW', 2, 2, 3, 0.00, 'boarding_house', 'rent', 'Parkview boarding house ', 'Lusaka', 'Zambia', -15.41746306, 28.28246176, 'available', NULL, 1, '', '', 109, 0, 0, '2026-03-05 16:48:33', NULL, 6, NULL, 0, 0, 0),
+(20, 130, 'Female Boarding houses', 'Mass media female boarding hpuse.\r\n15mins walk to Unilus Pioneer \r\n15mins walk to CUZ medical campus \r\n5mins walk to UNZA\r\n2mins walk to Chreso', 1500.00, 'ZMW', 6, 4, 14, 100.00, 'boarding_house', 'service', 'Alick Nkhata Road', 'Lusaka', 'Zambia', -15.40642960, 28.32837460, 'available', NULL, 1, '', 'https://vt.tiktok.com/ZSH2CRtNQ/', 128, 0, 0, '2026-04-01 06:09:47', NULL, 4, NULL, 0, 0, 0),
+(24, 191, '4 Bedroomed house for sale', 'HOUSE FOR SALE – EAST OF GARNETON\n✅ 4 Bedroomed House\n✅ Sitting on a 20 × 30 plot\n✅ Borehole available 💧\n📍 Located East of Garneton, Kitwe\n💰 Price: K560,000\ncall/app: 0963111800', 560000.00, 'ZMW', 4, 2, 0, 0.00, 'house', 'sale', 'East of garnaton', 'kitwe', 'Zambia', -15.38750000, 28.32280000, 'available', NULL, 1, '', '', 73, 0, 0, '2026-04-16 03:31:52', NULL, NULL, NULL, 0, 0, 0),
+(31, 130, 'Female bed sitter ', 'Kalundu\r\n4min walk est park ', 3000.00, 'ZMW', 4, 2, 2, 50.00, 'boarding_house', 'rent', 'Kalundu', 'Lusaka', 'Zambia', -15.37915590, 28.32573900, 'available', NULL, 0, 'Water 24/7', '', 52, 0, 0, '2026-04-19 05:38:08', NULL, 2, NULL, 0, 0, 0),
+(32, 130, 'Helen kaunda', 'K1000 to be be 4,\r\nK1200 self contained to be 4', 1000.00, 'ZMW', 8, 2, 8, 2.00, 'boarding_house', 'rent', 'Helen Kaunda', 'Lusaka', 'Zambia', -15.40441910, 28.34473380, 'available', NULL, 0, '', '', 54, 0, 0, '2026-04-19 05:52:09', NULL, 4, NULL, 0, 0, 0),
+(33, 130, 'Kalingalinga female bh', '9mins walk to unza and chreso,\r\n25mins walk walk to unlis pioneer and cuz', 1250.00, 'ZMW', 3, 2, 4, 20.00, 'boarding_house', 'rent', 'Kalingalinga', 'Lusaka', 'Zambia', -15.40378110, 28.33012260, 'available', NULL, 0, '', '', 50, 0, 0, '2026-04-19 05:56:03', NULL, 3, NULL, 0, 0, 0),
+(34, 130, 'Ridgeway Campus', '5mins walk to Ridgway\r\nTo be 2 lediea\r\n5mins walk to Ridgeway\r\n', 2000.00, 'ZMW', 4, 2, 4, 20.00, 'boarding_house', 'rent', 'Ridgeway', 'Lusaka', 'Zambia', -15.43308560, 28.31989400, 'available', NULL, 0, '', '', 60, 0, 0, '2026-04-19 06:03:17', NULL, 2, NULL, 0, 0, 0),
+(38, 240, '1 Inside Room for rent', 'Shared house, 1 inside room for rent\nIbex, near Ciderz\nResponsible Females ONLY\n', 2500.00, 'ZMW', 1, 1, NULL, NULL, 'house', 'rent', 'Ibex, Ciderz', 'Lusaka', 'Zambia', -15.41876592, 28.36424835, 'available', NULL, 1, 'Security', '', 30, 0, 0, '2026-04-28 18:20:39', NULL, NULL, NULL, 0, 0, 0);
 
 -- --------------------------------------------------------
 
@@ -1435,7 +1836,12 @@ INSERT INTO `property_images` (`id`, `property_id`, `image_path`, `is_main`, `cr
 (68, 34, 'assets/images/properties/prop_34_69e4704469161.jpg', 0, '2026-04-19 06:03:48', 'image'),
 (69, 34, 'assets/images/properties/prop_34_69e470446ad5b.jpg', 0, '2026-04-19 06:03:48', 'image'),
 (70, 34, 'assets/images/properties/prop_34_69e470446cab5.jpg', 0, '2026-04-19 06:03:48', 'image'),
-(71, 34, 'assets/images/properties/prop_34_69e470446f39b.jpg', 0, '2026-04-19 06:03:48', 'image');
+(71, 34, 'assets/images/properties/prop_34_69e470446f39b.jpg', 0, '2026-04-19 06:03:48', 'image'),
+(73, 11, 'assets/images/properties/vid_11_69ef6e3c193e3.mp4', 0, '2026-04-27 14:10:04', 'video'),
+(80, 38, 'assets/images/properties/prop_69f0fa8139382_1777400449.jpg', 1, '2026-04-28 18:20:49', 'image'),
+(81, 38, 'assets/images/properties/prop_69f0fa813a917_1777400449.jpg', 0, '2026-04-28 18:20:49', 'image'),
+(82, 38, 'assets/images/properties/prop_69f0fa813afa3_1777400449.jpg', 0, '2026-04-28 18:20:49', 'image'),
+(83, 38, 'assets/images/properties/prop_69f0fa813c705_1777400449.jpg', 0, '2026-04-28 18:20:49', 'image');
 
 -- --------------------------------------------------------
 
@@ -1459,7 +1865,18 @@ CREATE TABLE `property_reports` (
 
 INSERT INTO `property_reports` (`id`, `property_id`, `user_id`, `reason`, `details`, `status`, `created_at`) VALUES
 (2, 7, NULL, 'fraud', '', 'pending', '2026-02-26 11:08:47'),
-(4, 6, NULL, 'fraud', '', 'dismissed', '2026-02-26 11:08:48');
+(4, 6, NULL, 'fraud', '', 'dismissed', '2026-02-26 11:08:48'),
+(5, 10, NULL, 'fraud', '', 'pending', '2026-04-30 21:54:03'),
+(6, 33, NULL, 'fraud', '', 'pending', '2026-04-30 21:54:04'),
+(7, 38, NULL, 'fraud', '', 'pending', '2026-04-30 21:54:04'),
+(8, 20, NULL, 'fraud', '', 'pending', '2026-04-30 21:54:05'),
+(9, 34, NULL, 'fraud', '', 'pending', '2026-04-30 21:54:05'),
+(10, 31, NULL, 'fraud', '', 'pending', '2026-04-30 21:54:05'),
+(11, 24, NULL, 'fraud', '', 'pending', '2026-04-30 21:54:07'),
+(12, 6, NULL, 'fraud', '', 'pending', '2026-04-30 21:54:07'),
+(13, 32, NULL, 'fraud', '', 'pending', '2026-04-30 21:54:07'),
+(14, 9, NULL, 'fraud', '', 'pending', '2026-04-30 21:54:08'),
+(15, 11, NULL, 'fraud', '', 'pending', '2026-04-30 21:54:08');
 
 -- --------------------------------------------------------
 
@@ -1530,17 +1947,19 @@ CREATE TABLE `rent_payments` (
   `status` enum('pending','approved','rejected') DEFAULT 'pending',
   `dealer_notes` text DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT current_timestamp(),
-  `payment_method` enum('cash','bank_transfer','mobile_money') DEFAULT 'bank_transfer',
-  `months_paid` int(11) DEFAULT 1
+  `payment_method` enum('cash','bank_transfer','mobile_money','lenco') DEFAULT 'bank_transfer',
+  `months_paid` int(11) DEFAULT 1,
+  `reference` varchar(255) DEFAULT NULL,
+  `lenco_reference` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
 -- Dumping data for table `rent_payments`
 --
 
-INSERT INTO `rent_payments` (`id`, `rental_id`, `tenant_id`, `month_year`, `amount`, `currency`, `proof_file`, `status`, `dealer_notes`, `created_at`, `payment_method`, `months_paid`) VALUES
-(16, 24, 135, 'April 2026', 1500.00, 'ZMW', NULL, 'approved', 'Initial payment recorded by dealer', '2026-04-06 12:27:48', 'cash', 1),
-(17, 24, 135, 'May 2026', 1500.00, 'ZMW', 'assets/images/proofs/proof_135_1775480361.png', 'pending', NULL, '2026-04-06 12:59:21', '', 1);
+INSERT INTO `rent_payments` (`id`, `rental_id`, `tenant_id`, `month_year`, `amount`, `currency`, `proof_file`, `status`, `dealer_notes`, `created_at`, `payment_method`, `months_paid`, `reference`, `lenco_reference`) VALUES
+(16, 24, 135, 'April 2026', 1500.00, 'ZMW', NULL, 'approved', 'Initial payment recorded by dealer', '2026-04-06 12:27:48', 'cash', 1, NULL, NULL),
+(17, 24, 135, 'May 2026', 1500.00, 'ZMW', 'assets/images/proofs/proof_135_1775480361.png', 'pending', NULL, '2026-04-06 12:59:21', '', 1, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -1646,6 +2065,60 @@ CREATE TABLE `tenant_ratings` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `tenant_requests`
+--
+
+CREATE TABLE `tenant_requests` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `message` text NOT NULL,
+  `property_type` varchar(50) DEFAULT 'Any',
+  `location` varchar(100) DEFAULT 'Any',
+  `budget` decimal(10,2) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `emails_sent` tinyint(1) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `tenant_requests`
+--
+
+INSERT INTO `tenant_requests` (`id`, `user_id`, `message`, `property_type`, `location`, `budget`, `created_at`, `emails_sent`) VALUES
+(1, 135, 'am looking for a two bedroom house', 'Any', 'Any', NULL, '2026-04-27 21:12:55', 0),
+(2, 135, 'am looking for a two bedroom house', 'Any', 'Any', NULL, '2026-04-27 21:13:03', 0),
+(3, 135, 'am looking for a two bedroom house', 'Any', 'Any', NULL, '2026-04-27 21:15:23', 0),
+(4, 135, 'am looking for a two bedroom house', 'House', 'Any', NULL, '2026-04-27 21:25:47', 0),
+(5, 135, 'hey', 'House', 'Any', NULL, '2026-04-27 21:35:48', 0),
+(6, 135, '💪', 'Any', 'Any', NULL, '2026-04-28 08:27:14', 0),
+(7, 135, '❤️', 'Any', 'Any', NULL, '2026-04-28 08:36:31', 0),
+(8, 135, 'bsbznsbbs', 'Any', 'Any', NULL, '2026-04-28 09:20:29', 0),
+(9, 135, 'looking for a 4 bedroom house', 'Any', 'Any', NULL, '2026-04-28 10:53:20', 0);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `tenant_request_comments`
+--
+
+CREATE TABLE `tenant_request_comments` (
+  `id` int(11) NOT NULL,
+  `request_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `comment` text NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `tenant_request_comments`
+--
+
+INSERT INTO `tenant_request_comments` (`id`, `request_id`, `user_id`, `comment`, `created_at`) VALUES
+(1, 5, 135, 'hello', '2026-04-28 08:14:32'),
+(2, 1, 135, 'okay', '2026-04-28 08:24:34');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `transactions`
 --
 
@@ -1669,8 +2142,8 @@ CREATE TABLE `transactions` (
 
 INSERT INTO `transactions` (`id`, `user_id`, `reference`, `lenco_reference`, `amount`, `currency`, `status`, `message`, `payment_method`, `created_at`, `updated_at`) VALUES
 (1, 4, 'SUB-1771937278534', '2605514696', 20.00, 'ZMW', 'successful', 'Synced from Lenco: Successful', 'mobile-money', '2026-02-24 12:48:34', '2026-02-26 13:11:46'),
-(2, 4, 'SUB-1771938055904', '2605504827', 20.00, 'ZMW', 'successful', 'Synced from Lenco: Successful', 'mobile-money', '2026-02-24 13:01:38', '2026-03-06 13:32:33'),
-(3, 145, 'SUB-1776106391472', '2610308182', 20.00, 'ZMW', 'successful', 'Synced from Lenco: Successful', 'mobile-money', '2026-04-13 18:54:13', '2026-04-18 14:17:33');
+(2, 4, 'SUB-1771938055904', '2605504827', 20.00, 'ZMW', 'successful', 'Synced from Lenco: Successful', 'mobile-money', '2026-02-24 13:01:38', '2026-04-19 14:39:21'),
+(3, 145, 'SUB-1776106391472', '2610308182', 20.00, 'ZMW', 'successful', 'Synced from Lenco: Successful', 'mobile-money', '2026-04-13 18:54:13', '2026-04-24 18:18:36');
 
 -- --------------------------------------------------------
 
@@ -1714,7 +2187,7 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `phone`, `role`, `whatsa
 (38, 'Joseph Kashikite', 'joekashikite@gmail.com', '$2y$12$Rvyrr5Zg95B3Jr2dNtOQKOwxvxP3nfG68U64Q5LjnUl2Q0eDaxzE2', '0973042237', 'dealer', '', NULL, 1, 0, 0, '2026-02-28 20:42:02', '83193dd4a9ae95e22716e4932798bff7a30a3ca91a3bb3e19b07c4e403baa3bc', '2026-03-01 01:45:02', NULL, NULL, NULL, NULL, '022b776cae5d9d5f91c254734353433b1cb3632b2aceb98f3c186cda330b4a4f', '2026-02-28 22:29:32', NULL, NULL, NULL),
 (47, 'Nkhata Frank', 'frank.t.r.b59@gmail.com', '$2y$12$viqVTzF4appz3DMkojHjvegIT9K3gpS6j8HADZBtTGjS6ECMLUJxu', '0972232932', 'user', '', NULL, 1, 0, 0, '2026-03-02 11:46:37', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (49, 'John Doe', 'deleyi5268@ostahie.com', '$2y$12$tA7Z1f9bMxj/wpwHYl/RHeOTPGYwobbOzWyL.3/ScxOS52TyN3G9u', '0970000000', 'dealer', '', NULL, 1, 2, 0, '2026-03-03 04:23:23', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(50, 'Danny Nkhata', 'dannynkhata6@gmail.com', '$2y$12$n.4OIuEZ0LyEH5N5mK1fv.kvKLTU7hp70jl5WlTjDDbTYvjOVAVt2', '0973795625', 'dealer', '', NULL, 1, 1, 0, '2026-03-05 16:41:52', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(50, 'Danny Nkhata', 'dannynkhata6@gmail.com', '$2y$12$n.4OIuEZ0LyEH5N5mK1fv.kvKLTU7hp70jl5WlTjDDbTYvjOVAVt2', '0973795625', 'dealer', '', NULL, 1, 1, 0, '2026-03-05 16:41:52', NULL, NULL, NULL, 'DLR00727D', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (130, 'Muchinga Daka', 'muchingadaka@gmail.com', '$2y$12$sK2QTJINRilC4uKvRj2gde/i3MqqkP/gyz0zysSSK5qUhYhuoCaBa', '0971943272', 'dealer', '0971943272', NULL, 1, 1, 0, '2026-03-31 04:54:45', NULL, NULL, '106370573175463505756', NULL, NULL, NULL, NULL, NULL, NULL, 'assets/images/dealer_docs/dealer_130_69cb5435a9289.jpg', NULL),
 (131, 'Aaliyah Jane', 'janeaaliyah84@gmail.com', '$2y$12$b2UoPRPmcJ20h0Em7iUSBurI3TUW6djxNRcjze6Y.EyjOYGyNYUDG', '0766843216', 'user', '', NULL, 1, 0, 0, '2026-04-01 07:08:21', 'e50406cc7cf0686eddfeed946f5ff07d701910777bc5d93decfed0a4c9bb73dc', '2026-04-02 11:08:20', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (132, 'Atotwe Kasonso', 'atotwe.kasonso@gmail.com', '$2y$12$1sS0KCH0x8N9L4w6DHEUNec2BV.Q/rLE1zou3ldULFEzQYuEsv2Na', '0977954018', 'dealer', NULL, NULL, 1, 1, 0, '2026-04-01 09:33:41', NULL, NULL, '103976005748749058818', NULL, NULL, NULL, NULL, NULL, NULL, 'assets/images/dealer_docs/dealer_132_69cce69c3a87d.jpg', NULL),
@@ -1800,8 +2273,33 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `phone`, `role`, `whatsa
 (219, 'Amos Zulu', 'zuluamos14@gmail.com', '$2y$12$9RoV07/Qj3V/DdGRQrLZGOnAmOiIOGrTd6aoPPq8reHTOkAEDeLIy', '+260971795508', 'user', '', NULL, 1, 0, 0, '2026-04-17 11:48:00', '9946a705306e14b6696c9fd46e64452a426f34f7f38cadd244d710857a8845a1', '2026-04-18 15:48:00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (220, 'Fanwell Chaamwe', 'fanwell69@gmail.com', '$2y$12$LsmCdXuN2h61AkwzqVQNG..XYd3WMhfBBsZNDL1vDGcXhoCwyeViq', '+260973561220', 'user', '', NULL, 1, 0, 0, '2026-04-17 13:46:33', '8e641230554cedc99ac1196a14d5e8efbf6988e7bf21fa7ec7f50c6b2f4b6e44', '2026-04-18 17:46:33', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (221, 'Chonde Hampongo', 'hampongochonde@gmail.com', '$2y$12$qZc2pFtzC6j0XAq08zhOGOe/e2tJEfpwp1sGr.cihLlEdrP4YGXmK', '0767528150', 'user', '', NULL, 1, 0, 0, '2026-04-18 14:18:48', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(223, 'Chisala', 'chisalavudo@gmail.com', '$2y$12$oIIeCpYqC0EdLfhFpV3rxOR3wBTByR.FIDSKDwsSI5vIFsP/XxfUi', '0771354473', 'dealer', '', NULL, 0, 0, 0, '2026-04-19 08:53:16', NULL, NULL, NULL, 'CA7217C', 4, '2026-04-19 05:46:38', NULL, NULL, NULL, NULL, NULL),
-(224, 'Benjamin Jambo', 'bjambo42@gmail.com', '$2y$12$k52cLp8oVNHe4KSR9KJ6KeTSqG86cP1uHfy3FnMuEqwTaBc9NXO4.', '0779395606', 'dealer', '', NULL, 1, 1, 0, '2026-04-19 10:52:14', NULL, NULL, NULL, 'B393435', NULL, NULL, NULL, NULL, NULL, 'assets/images/dealer_docs/dealer_224_69e4b5682cbd8.jpeg', NULL);
+(223, 'Chisala', 'chisalavudo@gmail.com', '$2y$12$oIIeCpYqC0EdLfhFpV3rxOR3wBTByR.FIDSKDwsSI5vIFsP/XxfUi', '0771354473', 'dealer', '', NULL, 1, 1, 0, '2026-04-19 08:53:16', NULL, NULL, NULL, 'CA7217C', 4, '2026-04-19 05:46:38', NULL, NULL, NULL, 'assets/images/dealer_docs/verify_223_1777401016.jpg', NULL),
+(224, 'Benjamin Jambo', 'bjambo42@gmail.com', '$2y$12$k52cLp8oVNHe4KSR9KJ6KeTSqG86cP1uHfy3FnMuEqwTaBc9NXO4.', '0779395606', 'dealer', '', NULL, 1, 1, 0, '2026-04-19 10:52:14', NULL, NULL, NULL, 'B393435', NULL, NULL, NULL, NULL, NULL, 'assets/images/dealer_docs/dealer_224_69e4b5682cbd8.jpeg', NULL),
+(226, 'Jonathan mwale', 'jonathanmwale711@gmail.com', '$2y$12$Da8KKDMzMa/EMPrOoPuG/.wCmyy03kQeEq8P3DoWVJW9zH02/Nn.i', '0978889907', 'user', '', NULL, 1, 0, 0, '2026-04-22 07:44:01', '5cd378af9cd42d3de2b9b86f1bedda88fc64471fcb53d89b3e6b33ab1f9d0b7c', '2026-04-23 11:44:01', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(227, 'Rhyan Malama', 'rhyanmalama0@gmail.com', '$2y$12$UqHNf4GI10oXs3/79.EomuNsHeXsQulGZSmdxhTKMkIWA3M0a2wY6', '0974708252', 'user', '', NULL, 1, 0, 0, '2026-04-22 08:17:54', '4fbc636dcd216f388836bd7838de91a18c81cf555216d55174a9580cd9c571fb', '2026-04-23 12:17:54', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(228, 'Nelson Lungu', 'nelsonlungu28@gmail.com', '$2y$12$XeQ1741M5a6vxqysz/xJieA6qIkUSi1WRYG7Mv9aoJMDKjaOM28lm', '0975091199', 'user', '', NULL, 1, 0, 0, '2026-04-22 08:37:35', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(229, 'Arnold Banda', 'arnoldbandachabdollar@gmail.com', '$2y$12$5v8J0i0mE9.J3SiIzGuICOsyIef7Txa3jHPDzJRyNOW3BG1PofQiW', '0771016212', 'user', '', NULL, 1, 0, 0, '2026-04-22 08:39:52', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(230, 'Twambo Nakuweza', 'twambonakuweza4@gmail.com', '$2y$12$bY3HVE.mJ2yZByY4MTvro.yXgrX3VBpHvCz23AjAf7J19kiJF3j/K', '097849622w', 'user', '', NULL, 1, 0, 0, '2026-04-22 11:29:54', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(231, 'Jack Chanda', 'www.chanda.jack00@gmail.com', NULL, '0979709972', 'user', '+260979709972', NULL, 1, 0, 0, '2026-04-22 12:57:20', NULL, NULL, '105667404531149960738', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(232, 'Juliet Chola', 'julietchola414@gmail.com', '$2y$12$Gahj7IR3XdxKQUnST2cGDeN5j4CJd92jIaeb6I4TSj.a3a20AKvhO', '0779429462', 'user', '', NULL, 1, 0, 0, '2026-04-22 15:01:38', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(233, 'lyness mwanza', 'lynessmwanza3@gmail.com', '$2y$12$vw3NdWpf8RkAwKk5O4yn4.zUhA1r0m4XCh7KK3ac4ZdIgZeKoyosm', '0777166431', 'user', '', NULL, 1, 0, 0, '2026-04-22 15:11:21', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(234, 'Ray Ng&amp;#039;andwe', 'ngandweraymumba@gmail.com', '$2y$12$TLLeWyj7fg4p/aPbTaQGJupgq9Eb2y8h8dGdQCO7uOb2c1cs0fqZ2', '0967643887', 'user', '', NULL, 1, 0, 0, '2026-04-22 15:36:01', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(236, 'Cecilia Banda', 'bandacecilia63@gmail.com', '$2y$12$Zh1vRlBnqsLoyolxYuzQR.NxMvgHENt2OUWdumyTlo.UosklXXPCi', '0770024344', 'user', '', NULL, 1, 0, 0, '2026-04-23 12:38:31', '4657aba67c883ae4b529bd9eac73a15b15c28f07a73b87463b9402340db94bb3', '2026-04-24 16:38:31', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(237, 'Chongo', 'lukachongo2020@gmail.com', '$2y$12$vRINfVlXeFn69SHWiOu6ruDZMv5qj4b2UcKdZSERfGqBsB3Huv/uq', '0970046703', 'user', '', NULL, 1, 0, 0, '2026-04-23 13:37:42', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(238, 'Innocent Katongo', 'katongoinnocent27@gmail.com', '$2y$12$Qm/PswNQH0mjSbbbTL1pAueKuTTK1vHFMj4cXCRzSCdB5Hot9MV5e', '0971446900', 'user', '', NULL, 1, 0, 0, '2026-04-24 12:39:11', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(239, 'nine', 'luckchisala@gmail.com', '$2y$12$YFma.b9mBAGQa04XTEiNJugIGTZxALMr75S.7eMBr9lSXdK7Gh/l6', '0772122221', 'user', '', NULL, 1, 0, 0, '2026-04-24 17:35:04', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(240, 'Mulenga Ngoma', 'munyaradzi868@gmail.com', '$2y$12$3tJGcLuQh2EkgFgxMQH1GeiM0x35t/AHhQQz423gn.t5vivT3Lt8W', '0975580726', 'dealer', '', NULL, 1, 1, 0, '2026-04-25 12:02:29', NULL, NULL, NULL, 'ME8A1AB', NULL, NULL, NULL, NULL, NULL, 'assets/images/dealer_docs/verify_240_1777119605.pdf', NULL),
+(241, 'Peter Chinsungwe', 'peteralsinal71@gmail.com', '$2y$12$lNFPoIJ6DrbOaw59aclMjuy6iCyz3rcl/uUTau2eBnMVNpOhshQve', '0770303313', 'user', '', NULL, 1, 0, 0, '2026-04-25 16:52:05', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(242, 'Flavia Mumba', 'flaviamumba03@gmail.com', '$2y$12$Q29SgBkkGzVO/PnmXdCagepIOa1tLk/w/sSDFRvc0sCTs11mf/nWK', '0766961731', 'user', '', NULL, 1, 0, 0, '2026-04-25 17:32:50', 'd46cb87ef283a758ba8d555e2f255fdce232205efa8fccd96212d0fcf354c6df', '2026-04-26 21:32:49', '116039773866795370341', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(243, 'Charity Chisha', 'charitychisha88@gmail.com', '$2y$12$rHS61DDiRNlghrwZdbhfmuos7aWmlWtLaiOAGKfBYjGA.Qa0YUzgO', '0977716380', 'user', '', NULL, 1, 0, 0, '2026-04-26 19:58:57', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(244, 'Peggy sakala', 'peggymsakala@gmail.com', '$2y$12$r3LzjvKT9IFCzYHsnbpNzu2YcwPPevZumkZwtbHRBxGL/QQtyJp86', '0776004717', 'user', '', NULL, 1, 0, 0, '2026-04-27 11:04:40', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(245, 'victor legit', 'legitvsakala756@gmail.com', '$2y$12$tMqg1iuoszo0eVu/BcD7S.YuMr24CQTUUWWqNsgYGMIezSIm5hJHe', '0978704090', 'user', '', NULL, 1, 0, 0, '2026-04-27 16:22:04', '278de1d6854b0dd49eef09d2f1f5b119d5e2e4953df900e538485a2b20890947', '2026-04-28 20:22:04', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(246, 'Katebe Kabwe', 'kabwekatebe94@gmail.com', '$2y$12$z7QChnD/ZlGoioAkMovgDOqO3PfLf31PZmRAfJsoCkwtitxJ6OYGa', '0972253693', 'user', '', NULL, 1, 0, 0, '2026-04-27 20:51:42', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(247, 'Anderson Mwila', 'andersonmushinka12@gmail.com', '$2y$12$L6pnGSG4rRuBdhjh9yp1i.zBNPXIhRFKmgreTKT/qR0qpYqNrOivC', '0773668924', 'user', '', NULL, 1, 0, 0, '2026-04-28 10:47:15', 'b15a3aa7d62b5db37c2c2353f125bf4be29c98e22e4eec8c6ebd8c818cd6e5f9', '2026-04-29 14:47:15', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(248, 'Richard Tembo', 'mr.richard.tembo@gmail.com', '$2y$12$BJJncLLKk1cjwSlumGEH/eQkiI6hUIwQSceKfoO/U3LjE29Qmo1mi', '0979740985', 'user', '', NULL, 1, 0, 0, '2026-04-29 14:07:40', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(249, 'Clive mweene', 'mweenekamfwa70@gmail.com', '$2y$12$hJIT63g75gS1ym7uU87E.unpDv9mOi6rEQkmoX8WnUfNpd4n4LxdK', '0979172416', 'user', '', NULL, 1, 0, 0, '2026-04-30 12:53:39', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(250, 'Richard Kasongo', 'kasongorichard16@gmail.com', '$2y$12$0Gzs3QllcXfO/l/JdgZMo.a0Q47H5iKoQaVGN6bgKVC6FGxvqA0XC', '0971640136', 'user', '', NULL, 1, 0, 0, '2026-04-30 16:24:30', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(251, 'Timothy Mwanza', 'timothymwanza@gmail.com', '$2y$12$Z5s7xYbrYQq1.VkL/LRwYObZ1Xa88ynqEHdsgk/Ua5PPF9oXwVydS', '+2609774542799', 'user', '', NULL, 1, 0, 0, '2026-05-01 04:31:22', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 --
 -- Indexes for dumped tables
@@ -1869,6 +2367,13 @@ ALTER TABLE `notifications`
 ALTER TABLE `notification_reads`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `unique_read` (`notification_id`,`user_id`);
+
+--
+-- Indexes for table `premium_contacts`
+--
+ALTER TABLE `premium_contacts`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `properties`
@@ -1964,6 +2469,21 @@ ALTER TABLE `tenant_ratings`
   ADD KEY `fk_tenant_rating_rental` (`rental_id`);
 
 --
+-- Indexes for table `tenant_requests`
+--
+ALTER TABLE `tenant_requests`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `tenant_request_comments`
+--
+ALTER TABLE `tenant_request_comments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `request_id` (`request_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
 -- Indexes for table `transactions`
 --
 ALTER TABLE `transactions`
@@ -1988,7 +2508,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `activity_logs`
 --
 ALTER TABLE `activity_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1064;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1404;
 
 --
 -- AUTO_INCREMENT for table `app_feedbacks_and_requests`
@@ -2000,19 +2520,19 @@ ALTER TABLE `app_feedbacks_and_requests`
 -- AUTO_INCREMENT for table `favorites`
 --
 ALTER TABLE `favorites`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `landlord_ratings`
 --
 ALTER TABLE `landlord_ratings`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `leads`
 --
 ALTER TABLE `leads`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
 
 --
 -- AUTO_INCREMENT for table `messages`
@@ -2024,31 +2544,37 @@ ALTER TABLE `messages`
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `notification_reads`
 --
 ALTER TABLE `notification_reads`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+
+--
+-- AUTO_INCREMENT for table `premium_contacts`
+--
+ALTER TABLE `premium_contacts`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `properties`
 --
 ALTER TABLE `properties`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
 
 --
 -- AUTO_INCREMENT for table `property_images`
 --
 ALTER TABLE `property_images`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=72;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=86;
 
 --
 -- AUTO_INCREMENT for table `property_reports`
 --
 ALTER TABLE `property_reports`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `referral_rewards`
@@ -2084,7 +2610,7 @@ ALTER TABLE `saved_properties`
 -- AUTO_INCREMENT for table `settings`
 --
 ALTER TABLE `settings`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `subscriptions`
@@ -2105,6 +2631,18 @@ ALTER TABLE `tenant_ratings`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `tenant_requests`
+--
+ALTER TABLE `tenant_requests`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
+--
+-- AUTO_INCREMENT for table `tenant_request_comments`
+--
+ALTER TABLE `tenant_request_comments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
 -- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
@@ -2114,7 +2652,7 @@ ALTER TABLE `transactions`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=225;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=252;
 
 --
 -- Constraints for dumped tables
@@ -2147,6 +2685,12 @@ ALTER TABLE `messages`
   ADD CONSTRAINT `messages_ibfk_1` FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `messages_ibfk_2` FOREIGN KEY (`receiver_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `messages_ibfk_3` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `premium_contacts`
+--
+ALTER TABLE `premium_contacts`
+  ADD CONSTRAINT `fk_premium_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `properties`
@@ -2221,6 +2765,19 @@ ALTER TABLE `tenant_ratings`
   ADD CONSTRAINT `fk_tenant_rating_dealer` FOREIGN KEY (`dealer_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_tenant_rating_rental` FOREIGN KEY (`rental_id`) REFERENCES `rentals` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_tenant_rating_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `tenant_requests`
+--
+ALTER TABLE `tenant_requests`
+  ADD CONSTRAINT `tenant_requests_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `tenant_request_comments`
+--
+ALTER TABLE `tenant_request_comments`
+  ADD CONSTRAINT `tenant_request_comments_ibfk_1` FOREIGN KEY (`request_id`) REFERENCES `tenant_requests` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `tenant_request_comments_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `transactions`

@@ -7,7 +7,11 @@ $user = verifyToken();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     try {
-        $stmt = $conn->prepare("SELECT id, name, email, phone, role, identity_verified, verification_document FROM users WHERE id = ?");
+        $stmt = $conn->prepare("
+            SELECT u.id, u.name, u.email, u.phone, u.role, u.identity_verified, u.verification_document,
+                   (SELECT COUNT(*) FROM transactions t WHERE t.user_id = u.id AND t.amount >= 5 AND (t.status = 'successful' OR t.status = 'SUCCESSFUL' OR t.status = 'completed' OR t.status = 'COMPLETED')) as pro_count
+            FROM users u WHERE u.id = ?
+        ");
         $stmt->execute([$user['id']]);
         
         if ($stmt->rowCount() == 0) {
@@ -16,7 +20,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             exit();
         }
 
-        echo json_encode($stmt->fetch());
+        $userData = $stmt->fetch(PDO::FETCH_ASSOC);
+        $userData['is_pro'] = ($userData['pro_count'] > 0);
+        unset($userData['pro_count']); // Remove the count from response
+        
+        echo json_encode($userData);
     } catch (Exception $e) {
         http_response_code(500);
         echo json_encode(["message" => "Server error"]);

@@ -232,7 +232,10 @@ class _DealerIdentityVerificationScreenState extends State<DealerIdentityVerific
                   children: [
                     const Text('Verify Your Identity', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 16),
-                    const Text('As a dealer, you must verify your identity before accessing the dashboard. Please upload a valid ID (JPG, PNG, or PDF).', style: TextStyle(color: Colors.black54)),
+                    const Text(
+                      'As a dealer, you must verify your identity before accessing the dashboard. Please upload your NRC or a photo of yourself standing next to your property (JPG, PNG, or PDF).', 
+                      style: TextStyle(color: Colors.black54)
+                    ),
                     const SizedBox(height: 32),
                     Container(
                       padding: const EdgeInsets.all(24),

@@ -276,6 +276,123 @@ class ApiService {
     }
   }
 
+  // TENANT REQUESTS
+  static Future<List<dynamic>> fetchTenantRequests() async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/public/tenant_requests.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'action': 'get_requests'}),
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+      if (decoded['status'] == 'success') {
+        return decoded['data'] ?? [];
+      } else {
+        throw Exception(decoded['message'] ?? 'Failed to fetch requests');
+      }
+    } else {
+      throw Exception('Server error: ${response.statusCode}');
+    }
+  }
+
+  static Future<int> fetchTenantRequestsCount() async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/public/tenant_requests.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'action': 'get_requests_count'}),
+      );
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded['status'] == 'success' && decoded['data'] != null) {
+          return int.tryParse(decoded['data']['total']?.toString() ?? '0') ?? 0;
+        }
+      }
+    } catch (_) {}
+    return 0;
+  }
+
+  static Future<Map<String, dynamic>> addTenantRequest(String message, String propertyType, String location, String budget) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/public/tenant_requests.php'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'action': 'add_request',
+        'message': message,
+        'property_type': propertyType,
+        'location': location,
+        'budget': budget,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+      if (decoded['status'] == 'success') {
+        return decoded['data'] ?? {};
+      } else {
+        throw Exception(decoded['message'] ?? 'Failed to add request');
+      }
+    } else {
+      throw Exception('Server error: ${response.statusCode}');
+    }
+  }
+
+  // TENANT REQUEST COMMENTS
+  static Future<List<dynamic>> fetchRequestComments(String requestId) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/public/tenant_requests.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'action': 'get_comments', 'request_id': requestId}),
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+      if (decoded['status'] == 'success') {
+        return decoded['data'] ?? [];
+      } else {
+        throw Exception(decoded['message'] ?? 'Failed to fetch comments');
+      }
+    } else {
+      throw Exception('Server error: ${response.statusCode}');
+    }
+  }
+
+  static Future<Map<String, dynamic>> addRequestComment(String requestId, String comment) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/public/tenant_requests.php'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'action': 'add_comment',
+        'request_id': requestId,
+        'comment': comment,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+      if (decoded['status'] == 'success') {
+        return decoded['data'] ?? {};
+      } else {
+        throw Exception(decoded['message'] ?? 'Failed to add comment');
+      }
+    } else {
+      throw Exception('Server error: ${response.statusCode}');
+    }
+  }
+
   // Tenant favorites
   static Future<Map<String, dynamic>> toggleFavorite(String propertyId) async {
     final prefs = await SharedPreferences.getInstance();

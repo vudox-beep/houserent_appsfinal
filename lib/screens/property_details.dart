@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform, File;
+import 'dart:ui' show ImageFilter;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -48,6 +49,7 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
   final _landlordReviewController = TextEditingController();
   bool _isSendingInquiry = false;
   int _publicNotifBadgeCount = 0;
+  int _houseHuntBadgeCount = 0;
   String _currentUserId = '';
   bool _isLoadingLandlordRating = false;
   bool _isSubmittingLandlordRating = false;
@@ -58,6 +60,42 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
   
   bool _hasPaidContactAccess = false;
   bool _isCheckingContactAccess = false;
+
+  void _showLoginRequiredPopup() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Login Required',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+        ),
+        content: const Text(
+          'Please login to access this feature.',
+          style: TextStyle(height: 1.4, color: Colors.black54),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Not now', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.go('/login');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFFC107),
+              foregroundColor: Colors.black87,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Login', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
 
   bool _isServiceType(String typeLower) {
     return typeLower.contains('wedding') ||
@@ -99,8 +137,17 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
     _pageController = PageController();
     _loadPublicNotificationBadgeCount();
     _refreshPublicNotificationBadgeCount();
+    _loadHouseHuntBadgeCount();
     _checkLoginStatus();
     _fetchPropertyDetails();
+  }
+
+  Future<void> _loadHouseHuntBadgeCount() async {
+    final count = await ApiService.fetchTenantRequestsCount();
+    if (!mounted) return;
+    setState(() {
+      _houseHuntBadgeCount = count;
+    });
   }
 
   Future<void> _loadPublicNotificationBadgeCount() async {
@@ -119,6 +166,7 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
       _publicNotifBadgeCount = count;
     });
   }
+
 
   @override
   void dispose() {
@@ -1113,6 +1161,11 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
             label: 'Saved',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.campaign_outlined),
+            activeIcon: Icon(Icons.campaign),
+            label: 'House Hunt',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.notifications_none),
             activeIcon: Icon(Icons.notifications),
             label: 'Alerts',
@@ -1296,24 +1349,61 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
                     },
                   ),
                   
-                  // Top Left Status Badge
-                  Positioned(
-                    top: 16,
-                    left: 16,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: ((_property!['status']?.toString().toLowerCase() ?? 'available') == 'taken') 
-                            ? Colors.red.shade600 
-                            : Colors.green.shade800,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        (_property!['status'] ?? 'Available').toString().toUpperCase(),
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                  if (['taken', 'rented', 'sold'].contains(_property!['status']?.toString().toLowerCase() ?? ''))
+                    Positioned.fill(
+                      child: ClipRRect(
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+                          child: Container(
+                            color: Colors.white.withOpacity(0.3),
+                            alignment: Alignment.center,
+                            child: Builder(
+                              builder: (context) {
+                                final pType = (_property!['property_type']?.toString() ?? '').toLowerCase();
+                                final purposeKey = _purposeKey(_property!, pType);
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade700.withOpacity(0.9),
+                                    borderRadius: BorderRadius.circular(8),
+                                    boxShadow: [
+                                      BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))
+                                    ],
+                                  ),
+                                  child: Text(
+                                    purposeKey == 'sale' ? 'SOLD' : 'RENTED',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 1.2,
+                                    ),
+                                  ),
+                                );
+                              }
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                  
+                  // Top Left Status Badge (Removed since we have a center badge now)
+                  if (!['taken', 'rented', 'sold'].contains(_property!['status']?.toString().toLowerCase() ?? 'available'))
+                    Positioned(
+                      top: 16,
+                      left: 16,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade800,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          (_property!['status'] ?? 'Available').toString().toUpperCase(),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ),
+                    ),
 
                   // Bottom Left Price Badge
                   Positioned(
@@ -1914,6 +2004,11 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
             label: 'Saved',
           ),
           BottomNavigationBarItem(
+            icon: _buildHouseHuntIcon(active: false),
+            activeIcon: _buildHouseHuntIcon(active: true),
+            label: 'House Hunt',
+          ),
+          BottomNavigationBarItem(
             icon: _buildNotificationIcon(active: false),
             activeIcon: _buildNotificationIcon(active: true),
             label: 'Alerts',
@@ -1928,6 +2023,7 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
         selectedItemColor: const Color(0xFFFFC107),
         unselectedItemColor: Colors.grey,
         backgroundColor: Colors.white,
+        type: BottomNavigationBarType.fixed,
         onTap: (index) {
           if (index == 0) {
             context.go('/home');
@@ -1939,12 +2035,21 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
                 context.go('/dealer-dashboard');
               }
             } else {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please login to view saved properties')));
-              context.go('/login');
+              _showLoginRequiredPopup();
             }
           } else if (index == 2) {
-            context.go('/public-notifications');
+            if (_isLoggedIn) {
+              context.go('/tenant-requests');
+            } else {
+              _showLoginRequiredPopup();
+            }
           } else if (index == 3) {
+            if (_isLoggedIn) {
+              context.go('/public-notifications');
+            } else {
+              _showLoginRequiredPopup();
+            }
+          } else if (index == 4) {
             if (_isLoggedIn) {
               if (_userRole == 'dealer') {
                 context.go('/dealer-dashboard'); 
@@ -1995,6 +2100,47 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
     final badgeText =
         _publicNotifBadgeCount > 99 ? '99+' : _publicNotifBadgeCount.toString();
 
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        icon,
+        Positioned(
+          right: -8,
+          top: -6,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(
+              color: Colors.red.shade600,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            constraints: const BoxConstraints(minWidth: 16, minHeight: 14),
+            child: Text(
+              badgeText,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHouseHuntIcon({
+    required bool active,
+    Color? iconColor,
+  }) {
+    final icon = Icon(
+      active ? Icons.campaign : Icons.campaign_outlined,
+      color: iconColor,
+    );
+    if (_houseHuntBadgeCount <= 0) return icon;
+
+    final badgeText =
+        _houseHuntBadgeCount > 99 ? '99+' : _houseHuntBadgeCount.toString();
     return Stack(
       clipBehavior: Clip.none,
       children: [

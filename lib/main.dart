@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:go_router/go_router.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
@@ -15,10 +16,19 @@ import 'screens/forgot_password_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/notifications_screen.dart';
 import 'screens/public_notifications_screen.dart';
+import 'screens/video_walkthroughs_screen.dart';
+import 'screens/tenant_requests_screen.dart';
+import 'screens/zed_bine_screen.dart';
 import 'services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  await Supabase.initialize( 
+    url: 'https://zvrisevisfxtxiphzkuo.supabase.co', 
+    anonKey: 'sb_publishable_ccFKo_5mX3RBRKUm3gTmbg_VmU7I8Nl', 
+  ); 
+
   await NotificationService.initialize();
   runApp(const HouseRentApp());
 }
@@ -41,6 +51,14 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/public-notifications',
       builder: (context, state) => const PublicNotificationsScreen(),
+    ),
+    GoRoute(
+      path: '/video-walkthroughs',
+      builder: (context, state) => const VideoWalkthroughsScreen(),
+    ),
+    GoRoute(
+      path: '/tenant-requests',
+      builder: (context, state) => const TenantRequestsScreen(),
     ),
     GoRoute(
       path: '/property/:id',
@@ -90,6 +108,10 @@ final GoRouter _router = GoRouter(
         final params = <String, String>{...queryParams, ...extraParams};
         return SearchResultsScreen(searchParams: params);
       },
+    ),
+    GoRoute(
+      path: '/zed-bine',
+      builder: (context, state) => const ZedBineScreen(),
     ),
   ],
 );

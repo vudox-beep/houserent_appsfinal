@@ -24,12 +24,22 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _errorMessage;
   bool _isEmailUnverified = false;
   bool _isResending = false;
+  int _houseHuntBadgeCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadPublicNotificationBadgeCount();
     _refreshPublicNotificationBadgeCount();
+    _loadHouseHuntBadgeCount();
+  }
+
+  Future<void> _loadHouseHuntBadgeCount() async {
+    final count = await ApiService.fetchTenantRequestsCount();
+    if (!mounted) return;
+    setState(() {
+      _houseHuntBadgeCount = count;
+    });
   }
 
   Future<void> _loadPublicNotificationBadgeCount() async {
@@ -181,8 +191,10 @@ class _LoginScreenState extends State<LoginScreen> {
     } else if (index == 1) {
       _showLoginRequiredPopup();
     } else if (index == 2) {
-      context.go('/public-notifications');
+      _showLoginRequiredPopup();
     } else if (index == 3) {
+      _showLoginRequiredPopup();
+    } else if (index == 4) {
       // Already on profile/login page
     }
   }
@@ -195,6 +207,44 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_publicNotifBadgeCount <= 0) return icon;
     final badgeText =
         _publicNotifBadgeCount > 99 ? '99+' : _publicNotifBadgeCount.toString();
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        icon,
+        Positioned(
+          right: -8,
+          top: -6,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(
+              color: Colors.red.shade600,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            constraints: const BoxConstraints(minWidth: 16, minHeight: 14),
+            child: Text(
+              badgeText,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHouseHuntIcon({required bool active, Color? iconColor}) {
+    final icon = Icon(
+      active ? Icons.campaign : Icons.campaign_outlined,
+      color: iconColor,
+    );
+    if (_houseHuntBadgeCount <= 0) return icon;
+
+    final badgeText =
+        _houseHuntBadgeCount > 99 ? '99+' : _houseHuntBadgeCount.toString();
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -439,6 +489,11 @@ class _LoginScreenState extends State<LoginScreen> {
             icon: Icon(Icons.favorite_border),
             activeIcon: Icon(Icons.favorite),
             label: 'Saved',
+          ),
+          BottomNavigationBarItem(
+            icon: _buildHouseHuntIcon(active: false),
+            activeIcon: _buildHouseHuntIcon(active: true),
+            label: 'House Hunt',
           ),
           BottomNavigationBarItem(
             icon: _buildNotificationIcon(active: false),

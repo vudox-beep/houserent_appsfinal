@@ -3,6 +3,30 @@ require_once '../cors.php';
 require_once '../db.php'; 
 require_once '../auth.php'; 
 
+// --- Rate Limiting Start ---
+require_once '../includes/RateLimiter.php';
+$limiter = new RateLimiter(3, 900); // Max 3 login attempts per 900 seconds (15 minutes)
+
+// Get Real IP to support Cloudflare/Proxies
+$ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+    $ip = $_SERVER['HTTP_CF_CONNECTING_IP'];
+} elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+    $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+    $ip = trim($ips[0]);
+}
+
+if (!$limiter->check($ip . '_login')) {
+    http_response_code(200); // Send 200 so Flutter can parse the JSON error easily
+    echo json_encode([
+        'status' => 'error', 
+        'message' => 'Too many login attempts. Please try again in 15 minutes.',
+        'code' => 'rate_limited'
+    ]);
+    exit();
+}
+// --- Rate Limiting End ---
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { 
     http_response_code(405); 
     exit(); 

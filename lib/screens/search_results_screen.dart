@@ -79,7 +79,11 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
       // because the backend SQL queries often fail on case mapping or string structure
       final results = await ApiService.fetchProperties({});
       
-      List<dynamic> filteredResults = results;
+      final zedBineTypes = ['salon', 'gadget', 'mechanic', 'other_service'];
+      List<dynamic> filteredResults = results.where((p) {
+        final type = (p['property_type'] ?? p['type'] ?? '').toString().toLowerCase();
+        return !zedBineTypes.contains(type);
+      }).toList();
       
       if (cleanParams.containsKey('type')) {
         final type = cleanParams['type']!.toLowerCase().trim();

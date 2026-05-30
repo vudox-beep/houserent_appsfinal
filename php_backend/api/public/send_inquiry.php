@@ -6,6 +6,32 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 require_once '../db.php'; 
 
+// --- Rate Limiting Start ---
+$limiterPath = __DIR__ . '/../includes/RateLimiter.php';
+if (file_exists($limiterPath)) {
+    require_once $limiterPath;
+    $limiter = new RateLimiter(5, 60); // Max 5 inquiries per 60 seconds
+    
+    // Get Real IP to support Cloudflare/Proxies
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+        $ip = $_SERVER['HTTP_CF_CONNECTING_IP'];
+    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+        $ip = trim($ips[0]);
+    }
+
+    if (!$limiter->check($ip . '_send_inquiry')) {
+        http_response_code(429);
+        echo json_encode([
+            'status' => 'error', 
+            'message' => 'Too many inquiries sent. Please wait a moment.'
+        ]);
+        exit();
+    }
+}
+// --- Rate Limiting End ---
+
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { 
     http_response_code(200); 
     exit(); 

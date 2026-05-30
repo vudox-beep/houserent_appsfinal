@@ -146,11 +146,29 @@ if ($action === 'create_property') {
 
         $property_id = $conn->lastInsertId();
 
+        $queuedNotification = false;
+        if ($property_id) {
+            try {
+                $stmtCol = $conn->query("SHOW COLUMNS FROM properties LIKE 'emails_sent'");
+                if ($stmtCol->rowCount() == 0) {
+                    $conn->exec("ALTER TABLE properties ADD COLUMN emails_sent TINYINT(1) DEFAULT 1");
+                    $conn->exec("UPDATE properties SET emails_sent = 1");
+                }
+
+                $stmtMark = $conn->prepare("UPDATE properties SET emails_sent = 0 WHERE id = ?");
+                $stmtMark->execute([$property_id]);
+                $queuedNotification = true;
+            } catch (Exception $e) {
+                $queuedNotification = false;
+            }
+        }
+
         if ($property_id) { 
             json_response([
                 'status' => 'success', 
                 'message' => 'Property created successfully.', 
-                'property_id' => $property_id 
+                'property_id' => $property_id,
+                'queued_email_notification' => $queuedNotification
             ]); 
         } else { 
             json_response(['status' => 'error', 'message' => 'Failed to create property.']); 
@@ -276,52 +294,6 @@ if ($action === 'create_property') {
         }
         json_response(['status' => 'error', 'message' => 'Database error: ' . $e->getMessage()]);
     }
-} elseif ($action === 'delete_property_image') {
-    // --- DELETE SINGLE PROPERTY IMAGE ---
-    $property_id = $data['property_id'] ?? '';
-    $image_id = $data['image_id'] ?? '';
-
-    if (empty($property_id) || empty($image_id)) {
-        json_response(['status' => 'error', 'message' => 'Property ID and image ID are required.']);
-    }
-
-    try {
-        $verifyStmt = $conn->prepare("SELECT id FROM properties WHERE id = ? AND dealer_id = ?");
-        $verifyStmt->execute([$property_id, $dealer_id]);
-        if (!$verifyStmt->fetch()) {
-            json_response(['status' => 'error', 'message' => 'Unauthorized']);
-        }
-
-        $imgCheck = $conn->prepare("SELECT id FROM property_images WHERE id = ? AND property_id = ?");
-        $imgCheck->execute([$image_id, $property_id]);
-        if (!$imgCheck->fetch()) {
-            json_response(['status' => 'error', 'message' => 'Image not found.']);
-        }
-
-        $conn->beginTransaction();
-        $conn->prepare("DELETE FROM property_images WHERE id = ? AND property_id = ?")->execute([$image_id, $property_id]);
-
-        // Ensure exactly one main image remains if there are images.
-        $mainCountStmt = $conn->prepare("SELECT COUNT(*) FROM property_images WHERE property_id = ? AND is_main = 1");
-        $mainCountStmt->execute([$property_id]);
-        $mainCount = (int)$mainCountStmt->fetchColumn();
-        if ($mainCount === 0) {
-            $firstStmt = $conn->prepare("SELECT id FROM property_images WHERE property_id = ? ORDER BY id ASC LIMIT 1");
-            $firstStmt->execute([$property_id]);
-            $firstId = $firstStmt->fetchColumn();
-            if ($firstId) {
-                $conn->prepare("UPDATE property_images SET is_main = 1 WHERE id = ?")->execute([$firstId]);
-            }
-        }
-
-        $conn->commit();
-        json_response(['status' => 'success', 'message' => 'Image removed successfully.']);
-    } catch (PDOException $e) {
-        if ($conn->inTransaction()) {
-            $conn->rollBack();
-        }
-        json_response(['status' => 'error', 'message' => 'Database error: ' . $e->getMessage()]);
-    }
 } elseif ($action === 'upload_property_images' || $action === 'replace_property_images') { 
     // --- UPLOAD PROPERTY IMAGES & VIDEOS --- 
     $property_id = $data['property_id'] ?? ($_POST['property_id'] ?? ''); 
@@ -365,13 +337,6 @@ if ($action === 'create_property') {
     try {
         if ($replace_existing) {
             $conn->prepare("DELETE FROM property_images WHERE property_id = ?")->execute([$property_id]);
-        } else {
-            $hasMainStmt = $conn->prepare("SELECT COUNT(*) FROM property_images WHERE property_id = ? AND is_main = 1");
-            $hasMainStmt->execute([$property_id]);
-            $hasMain = (int)$hasMainStmt->fetchColumn() > 0;
-            if ($hasMain) {
-                $is_main = 0;
-            }
         }
 
         $imgStmt = $conn->prepare("INSERT INTO property_images (property_id, image_path, is_main) VALUES (?, ?, ?)");
