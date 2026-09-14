@@ -4,8 +4,10 @@ class LencoAPI {
     private $apiKey; 
 
     public function __construct() { 
-        $this->baseUrl = rtrim(LENCO_BASE_URL, '/'); 
-        $this->apiKey = LENCO_KEY; 
+        $configuredUrl = defined('LENCO_BASE_URL') ? LENCO_BASE_URL : (getenv('LENCO_BASE_URL') ?: 'https://api.lenco.co/access/v2');
+        $configuredKey = defined('LENCO_KEY') ? LENCO_KEY : (getenv('LENCO_KEY') ?: '');
+        $this->baseUrl = rtrim(str_replace('`', '', (string)$configuredUrl), '/');
+        $this->apiKey = (string)$configuredKey;
     } 
 
     private function getAuthorizationHeader() { 
@@ -89,14 +91,15 @@ class LencoAPI {
         return $digits; 
     } 
 
-    public function initiateMobileMoney($amount, $currency, $phone, $operator, $country = 'zm') { 
+    public function initiateMobileMoney($amount, $currency, $phone, $operator, $country = 'zm', $reference = null) {
         $normalizedPhone = $this->normalizePhone($phone, $country); 
+        $collectionReference = $reference ?: ('SUB-' . uniqid() . '-' . time());
         
         // Correct payload structure for Lenco Mobile Money 
         $payload = [ 
             'amount' => number_format((float) $amount, 2, '.', ''), 
             'currency' => $currency, 
-            'reference' => 'SUB-' . uniqid() . '-' . time(), 
+            'reference' => $collectionReference,
             'type' => 'mobile-money', 
             'mobileMoneyDetails' => [ 
                 'country' => strtoupper($country), // ZM or MW 

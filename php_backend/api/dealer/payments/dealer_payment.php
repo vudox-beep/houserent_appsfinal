@@ -82,7 +82,7 @@ if (file_exists($limiterPath)) {
          } 
      } 
      
-     $amount = 20; // SUBSCRIPTION_FEE 
+     $amount = 300; // SUBSCRIPTION_FEE — landlords K300 after free trial
      $currency = 'ZMW'; // CURRENCY 
      
      // Use the getPaid method equivalent from backend by initiating a transaction 

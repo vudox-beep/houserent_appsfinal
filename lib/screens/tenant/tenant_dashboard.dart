@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../services/api_service.dart';
+import '../../services/firebase_messaging_service.dart';
 import '../../utils/app_error.dart';
 import '../../widgets/skeleton_loader.dart';
 import '../home_screen.dart'; // Import PropertyCard from home_screen.dart
 import '../notifications_screen.dart';
+import 'tenant_rent_support_screen.dart';
+import '../rental_leases_screen.dart';
 
 const List<String> _monthNames = <String>[
   'January',
@@ -40,8 +44,18 @@ DateTime? _tryParseDate(dynamic value) {
     final year = int.tryParse(parts[1].trim());
     if (left.length == 2 && year != null) {
       const shortMonths = <String>[
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
       ];
       final monthIndex = shortMonths.indexOf(left[0]);
       final day = int.tryParse(left[1]);
@@ -54,7 +68,8 @@ DateTime? _tryParseDate(dynamic value) {
   return null;
 }
 
-String _formatDate(DateTime date) => '${_monthNames[date.month - 1]} ${date.day}, ${date.year}';
+String _formatDate(DateTime date) =>
+    '${_monthNames[date.month - 1]} ${date.day}, ${date.year}';
 
 String _calculateNextDueDate(Map<String, dynamic>? rental) {
   if (rental == null) return '--';
@@ -82,10 +97,16 @@ String _calculateNextDueDate(Map<String, dynamic>? rental) {
       final monthName = monthYearParts[0];
       final monthIndex = _monthNames.indexWhere((m) => m == monthName);
       if (year != null && monthIndex >= 0) {
-        var monthsPaid = int.tryParse('${latestPayment['months_paid'] ?? ''}') ?? 0;
+        var monthsPaid =
+            int.tryParse('${latestPayment['months_paid'] ?? ''}') ?? 0;
         if (monthsPaid < 1) {
-          final paidAmount = double.tryParse('${latestPayment['amount'] ?? ''}') ?? 0;
-          final rentAmount = double.tryParse('${rental['rent_amount'] ?? rental['price'] ?? ''}') ?? 0;
+          final paidAmount =
+              double.tryParse('${latestPayment['amount'] ?? ''}') ?? 0;
+          final rentAmount =
+              double.tryParse(
+                '${rental['rent_amount'] ?? rental['price'] ?? ''}',
+              ) ??
+              0;
           if (rentAmount > 0) {
             monthsPaid = (paidAmount / rentAmount).round();
           }
@@ -93,9 +114,17 @@ String _calculateNextDueDate(Map<String, dynamic>? rental) {
         }
 
         final monthBase = DateTime(year, monthIndex + 1, 1);
-        final dueBase = DateTime(monthBase.year, monthBase.month + monthsPaid, 1);
+        final dueBase = DateTime(
+          monthBase.year,
+          monthBase.month + monthsPaid,
+          1,
+        );
         final lastDay = DateTime(dueBase.year, dueBase.month + 1, 0).day;
-        final due = DateTime(dueBase.year, dueBase.month, startDay <= lastDay ? startDay : lastDay);
+        final due = DateTime(
+          dueBase.year,
+          dueBase.month,
+          startDay <= lastDay ? startDay : lastDay,
+        );
         return _formatDate(due);
       }
     }
@@ -133,8 +162,8 @@ class _TenantDashboardState extends State<TenantDashboard> {
     const _TenantOverviewTab(),
     const _TenantRentalsTab(),
     const _TenantPaymentsTab(),
-    const _TenantProfileTab(),
-    const _TenantSavedTab(),
+    const _TenantSavedTab(), // Swapped order here
+    const _TenantProfileTab(), // Swapped order here
     const NotificationsScreen(),
   ];
 
@@ -143,6 +172,44 @@ class _TenantDashboardState extends State<TenantDashboard> {
     super.initState();
     _selectedIndex = widget.initialTabIndex;
     _loadUnreadCount();
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _showRentSavingsIntro(),
+    );
+  }
+
+  Future<void> _showRentSavingsIntro() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('rent_savings_intro_seen_v1') == true || !mounted) return;
+    await prefs.setBool('rent_savings_intro_seen_v1', true);
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(
+          Icons.savings_outlined,
+          size: 46,
+          color: Color(0xFF5A3D31),
+        ),
+        title: const Text('💰 New: Rent Savings'),
+        content: const Text(
+          'Do you often spend the money you planned to use for rent?\n\n'
+          'Save it inside HouseRent Africa instead. Track your progress, receive reminders, and always be ready when rent is due.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Maybe Later'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              context.push('/rent-savings');
+            },
+            child: const Text('Start Saving Now'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadUnreadCount() async {
@@ -159,7 +226,6 @@ class _TenantDashboardState extends State<TenantDashboard> {
   @override
   void didUpdateWidget(TenantDashboard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    print("TenantDashboard didUpdateWidget: new ${widget.initialTabIndex}, old ${oldWidget.initialTabIndex}");
     if (widget.initialTabIndex != oldWidget.initialTabIndex) {
       setState(() {
         _selectedIndex = widget.initialTabIndex;
@@ -174,6 +240,7 @@ class _TenantDashboardState extends State<TenantDashboard> {
   }
 
   Future<void> _logout() async {
+    await FirebaseMessagingService.unregisterCurrentDevice();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
     await prefs.remove('role');
@@ -184,6 +251,7 @@ class _TenantDashboardState extends State<TenantDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    final compactTopBar = MediaQuery.sizeOf(context).width < 520;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF5A3D31),
@@ -197,11 +265,12 @@ class _TenantDashboardState extends State<TenantDashboard> {
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.home),
-            tooltip: 'Home',
-            onPressed: () => context.go('/home'),
-          ),
+          if (!compactTopBar)
+            IconButton(
+              icon: const Icon(Icons.home),
+              tooltip: 'Home',
+              onPressed: () => context.go('/home'),
+            ),
           // 🔔 Notification bell with unread badge
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
@@ -216,10 +285,41 @@ class _TenantDashboardState extends State<TenantDashboard> {
               ),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _logout,
-          )
+          if (compactTopBar)
+            PopupMenuButton<String>(
+              tooltip: 'More actions',
+              onSelected: (value) {
+                if (value == 'home') {
+                  context.go('/home');
+                } else if (value == 'logout') {
+                  _logout();
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(
+                  value: 'home',
+                  child: ListTile(
+                    leading: Icon(Icons.home_outlined),
+                    title: Text('Home'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'logout',
+                  child: ListTile(
+                    leading: Icon(Icons.logout),
+                    title: Text('Log out'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ],
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.logout),
+              tooltip: 'Log out',
+              onPressed: _logout,
+            ),
         ],
       ),
       body: _widgetOptions.elementAt(_selectedIndex),
@@ -241,14 +341,14 @@ class _TenantDashboardState extends State<TenantDashboard> {
             label: 'Payments',
           ),
           const BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-          const BottomNavigationBarItem(
             icon: Icon(Icons.favorite_border),
             activeIcon: Icon(Icons.favorite),
             label: 'Saved',
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profile',
           ),
           BottomNavigationBarItem(
             icon: Badge(
@@ -265,10 +365,9 @@ class _TenantDashboardState extends State<TenantDashboard> {
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: const Color(0xFF5A3D31),
-        unselectedItemColor: Colors.grey,
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
+        elevation: 16,
       ),
     );
   }
@@ -305,12 +404,11 @@ class _TenantOverviewTabState extends State<_TenantOverviewTab> {
         final userId = profile['id']?.toString() ?? '';
         if (userId.isNotEmpty) {
           final response = await http.post(
-            Uri.parse('https://houseforrent.site/api/tenant_contact_payment.php'),
+            Uri.parse(
+              'https://houseforrent.site/api/tenant_contact_payment.php',
+            ),
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: {
-              'action': 'get_status',
-              'user_id': userId,
-            },
+            body: {'action': 'get_status', 'user_id': userId},
           );
           if (response.statusCode == 200) {
             final decoded = jsonDecode(response.body);
@@ -349,12 +447,20 @@ class _TenantOverviewTabState extends State<_TenantOverviewTab> {
 
     final userName = _profile?['name'] ?? 'Tenant';
     final userEmail = _profile?['email'] ?? 'your email';
-    
+
     final hasRental = _rentals.isNotEmpty;
-    final currentRental = hasRental ? _rentals.first['title'] ?? 'Active Rental' : 'None';
-    
-    final nextDueDate = hasRental ? _calculateNextDueDate(_rentals.first as Map<String, dynamic>?) : '--'; 
-    final lastPayment = _payments.isNotEmpty ? 'ZMW ${_payments.first['amount']}' : '--';
+    final currentRental = hasRental
+        ? _rentals.first['title'] ?? 'Active Rental'
+        : 'None';
+
+    final nextDueDate = hasRental
+        ? _calculateNextDueDate(_rentals.first as Map<String, dynamic>?)
+        : '--';
+    final lastPayment = _payments.isNotEmpty
+        ? 'ZMW ${_payments.first['amount']}'
+        : '--';
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
@@ -364,11 +470,21 @@ class _TenantOverviewTabState extends State<_TenantOverviewTab> {
           Row(
             children: [
               Expanded(
-                child: Text('Welcome back, $userName!', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A))),
+                child: Text(
+                  'Welcome back, $userName!',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF1A1A1A),
+                  ),
+                ),
               ),
               if (_isPro)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFC107).withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
@@ -379,16 +495,182 @@ class _TenantOverviewTabState extends State<_TenantOverviewTab> {
                     children: const [
                       Icon(Icons.verified, size: 14, color: Color(0xFFD4A000)),
                       SizedBox(width: 4),
-                      Text('PRO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFFD4A000))),
+                      Text(
+                        'PRO',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Color(0xFFD4A000),
+                        ),
+                      ),
                     ],
                   ),
                 ),
             ],
           ),
           const SizedBox(height: 8),
-          const Text('Manage your rental and payments.', style: TextStyle(fontSize: 16, color: Colors.black54)),
+          Text(
+            'Manage your rental and payments.',
+            style: TextStyle(
+              fontSize: 16,
+              color: isDark ? Colors.white54 : Colors.black54,
+            ),
+          ),
           const SizedBox(height: 24),
-          
+
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const TenantRentSupportScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.build_circle_outlined),
+            label: const Text('Report issue or payment dispute'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 48),
+            ),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const RentalLeasesScreen(isDealer: false),
+                ),
+              );
+            },
+            icon: const Icon(Icons.file_present_outlined),
+            label: const Text('Digital leases'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 48),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF5A3D31), Color(0xFF8A6554)],
+              ),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(
+                      Icons.savings_outlined,
+                      color: Color(0xFFFFC107),
+                      size: 30,
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Save for Rent, Stress Less',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 21,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Never spend your rent money by mistake. Save any amount, build your balance gradually, track your progress, and receive rent reminders.',
+                  style: TextStyle(color: Colors.white, height: 1.45),
+                ),
+                const SizedBox(height: 14),
+                FilledButton.icon(
+                  onPressed: () => context.push('/rent-savings'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFC107),
+                    foregroundColor: const Color(0xFF3E2A22),
+                  ),
+                  icon: const Icon(Icons.arrow_forward),
+                  label: const Text('Start Saving'),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF14171A),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(
+                      Icons.local_shipping_outlined,
+                      color: Color(0xFFFFC107),
+                      size: 30,
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'HouseRent Shifts',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 21,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Furniture & rental shifting by HouseRent Africa. Request a truck or van, agree a price, and track your shift live.',
+                  style: TextStyle(color: Colors.white70, height: 1.45),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () => context.push('/moving'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFFFC107),
+                          foregroundColor: const Color(0xFF14171A),
+                        ),
+                        icon: const Icon(Icons.arrow_forward),
+                        label: const Text('Book a shift'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => context.push('/moving/my-shifts'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFFFC107),
+                          side: const BorderSide(color: Color(0xFFFFC107)),
+                        ),
+                        icon: const Icon(Icons.receipt_long_rounded),
+                        label: const Text('My shifts'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
           // Summary Cards Row
           LayoutBuilder(
             builder: (context, constraints) {
@@ -398,48 +680,111 @@ class _TenantOverviewTabState extends State<_TenantOverviewTab> {
                 runSpacing: 16,
                 children: [
                   SizedBox(
-                    width: isSmall ? double.infinity : (constraints.maxWidth - 32) / 3,
-                    child: _buildInfoCard(context, 'Current Rental', currentRental, Icons.home, Colors.brown.shade100, Colors.brown),
+                    width: isSmall
+                        ? double.infinity
+                        : (constraints.maxWidth - 32) / 3,
+                    child: _buildInfoCard(
+                      context,
+                      'Current Rental',
+                      currentRental,
+                      Icons.home,
+                      isDark
+                          ? Colors.brown.withOpacity(0.2)
+                          : Colors.brown.shade100,
+                      isDark ? Colors.brown.shade300 : Colors.brown,
+                    ),
                   ),
                   SizedBox(
-                    width: isSmall ? double.infinity : (constraints.maxWidth - 32) / 3,
-                    child: _buildInfoCard(context, 'Next Due Date', nextDueDate, Icons.calendar_today, Colors.orange.shade100, Colors.orange),
+                    width: isSmall
+                        ? double.infinity
+                        : (constraints.maxWidth - 32) / 3,
+                    child: _buildInfoCard(
+                      context,
+                      'Next Due Date',
+                      nextDueDate,
+                      Icons.calendar_today,
+                      isDark
+                          ? Colors.orange.withOpacity(0.2)
+                          : Colors.orange.shade100,
+                      isDark ? Colors.orange.shade300 : Colors.orange,
+                    ),
                   ),
                   SizedBox(
-                    width: isSmall ? double.infinity : (constraints.maxWidth - 32) / 3,
-                    child: _buildInfoCard(context, 'Last Payment', lastPayment, Icons.account_balance_wallet, Colors.green.shade100, Colors.green),
+                    width: isSmall
+                        ? double.infinity
+                        : (constraints.maxWidth - 32) / 3,
+                    child: _buildInfoCard(
+                      context,
+                      'Last Payment',
+                      lastPayment,
+                      Icons.account_balance_wallet,
+                      isDark
+                          ? Colors.green.withOpacity(0.2)
+                          : Colors.green.shade100,
+                      isDark ? Colors.green.shade300 : Colors.green,
+                    ),
                   ),
                 ],
               );
-            }
+            },
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           if (!hasRental)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.lightBlue.shade50,
+                color: isDark
+                    ? Colors.lightBlue.withOpacity(0.1)
+                    : Colors.lightBlue.shade50,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.lightBlue.shade100),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.lightBlue.withOpacity(0.3)
+                      : Colors.lightBlue.shade100,
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.info, color: Colors.lightBlue, size: 28),
+                  Icon(
+                    Icons.info,
+                    color: isDark ? Colors.lightBlueAccent : Colors.lightBlue,
+                    size: 28,
+                  ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('No Active Rental Found', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF005b9f), fontSize: 16)),
+                        Text(
+                          'No Active Rental Found',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? Colors.lightBlueAccent
+                                : const Color(0xFF005b9f),
+                            fontSize: 16,
+                          ),
+                        ),
                         const SizedBox(height: 4),
                         Text.rich(
                           TextSpan(
-                            text: 'You are not currently linked to any property. Ask your landlord/dealer to add you to their property using your email: ',
-                            style: TextStyle(color: Colors.blueGrey.shade800),
+                            text:
+                                'You are not currently linked to any property. Ask your landlord/dealer to add you to their property using your email: ',
+                            style: TextStyle(
+                              color: isDark
+                                  ? Colors.white70
+                                  : Colors.blueGrey.shade800,
+                            ),
                             children: [
-                              TextSpan(text: userEmail, style: const TextStyle(fontWeight: FontWeight.bold)),
+                              TextSpan(
+                                text: userEmail,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -449,12 +794,12 @@ class _TenantOverviewTabState extends State<_TenantOverviewTab> {
                 ],
               ),
             ),
-          
+
           const SizedBox(height: 40),
-          
+
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
@@ -472,11 +817,18 @@ class _TenantOverviewTabState extends State<_TenantOverviewTab> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Recent Payments', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      const Text(
+                        'Recent Payments',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       OutlinedButton(
                         onPressed: () {
                           // Navigate to payments tab
-                          final state = context.findAncestorStateOfType<_TenantDashboardState>();
+                          final state = context
+                              .findAncestorStateOfType<_TenantDashboardState>();
                           if (state != null) {
                             state.setState(() {
                               state._selectedIndex = 2; // Payments tab index
@@ -486,7 +838,9 @@ class _TenantOverviewTabState extends State<_TenantOverviewTab> {
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.blue,
                           side: const BorderSide(color: Colors.blue),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                         child: const Text('View History'),
                       ),
@@ -497,7 +851,10 @@ class _TenantOverviewTabState extends State<_TenantOverviewTab> {
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: DataTable(
-                    headingTextStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                    headingTextStyle: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
                     columns: const [
                       DataColumn(label: Text('MONTH')),
                       DataColumn(label: Text('AMOUNT')),
@@ -506,40 +863,72 @@ class _TenantOverviewTabState extends State<_TenantOverviewTab> {
                       DataColumn(label: Text('DATE UPLOADED')),
                     ],
                     rows: _payments.take(5).map((payment) {
-                      return DataRow(cells: [
-                        DataCell(Text(payment['month_year'] ?? 'N/A')),
-                        DataCell(Text('${payment['currency'] ?? 'ZMW'} ${payment['amount'] ?? '0.00'}')),
-                        DataCell(
-                          payment['proof_file'] != null
-                              ? const Icon(Icons.description, color: Colors.blue)
-                              : const Text('--'),
-                        ),
-                        DataCell(Text((payment['status'] ?? 'pending').toString().toUpperCase())),
-                        DataCell(Text(payment['created_at']?.substring(0, 10) ?? 'N/A')),
-                      ]);
+                      return DataRow(
+                        cells: [
+                          DataCell(Text(payment['month_year'] ?? 'N/A')),
+                          DataCell(
+                            Text(
+                              '${payment['currency'] ?? 'ZMW'} ${payment['amount'] ?? '0.00'}',
+                            ),
+                          ),
+                          DataCell(
+                            payment['proof_file'] != null
+                                ? const Icon(
+                                    Icons.description,
+                                    color: Colors.blue,
+                                  )
+                                : const Text('--'),
+                          ),
+                          DataCell(
+                            Text(
+                              (payment['status'] ?? 'pending')
+                                  .toString()
+                                  .toUpperCase(),
+                            ),
+                          ),
+                          DataCell(
+                            Text(
+                              payment['created_at']?.substring(0, 10) ?? 'N/A',
+                            ),
+                          ),
+                        ],
+                      );
                     }).toList(),
                   ),
                 ),
                 if (_payments.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(32.0),
+                  Padding(
+                    padding: const EdgeInsets.all(32.0),
                     child: Center(
-                      child: Text('No recent payments.', style: TextStyle(color: Colors.black54)),
+                      child: Text(
+                        'No recent payments.',
+                        style: TextStyle(
+                          color: isDark ? Colors.white54 : Colors.black54,
+                        ),
+                      ),
                     ),
                   ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildInfoCard(BuildContext context, String title, String value, IconData icon, Color bgColor, Color iconColor) {
+  Widget _buildInfoCard(
+    BuildContext context,
+    String title,
+    String value,
+    IconData icon,
+    Color bgColor,
+    Color iconColor,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -548,7 +937,9 @@ class _TenantOverviewTabState extends State<_TenantOverviewTab> {
             offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(color: Colors.grey.shade100),
+        border: Border.all(
+          color: isDark ? Colors.white12 : Colors.grey.shade100,
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -566,9 +957,24 @@ class _TenantOverviewTabState extends State<_TenantOverviewTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: Colors.black54, fontSize: 16, fontWeight: FontWeight.w500)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: isDark ? Colors.white54 : Colors.black54,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
                 const SizedBox(height: 8),
-                Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87), overflow: TextOverflow.ellipsis),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),
@@ -615,21 +1021,29 @@ class _TenantRentalsTabState extends State<_TenantRentalsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (_isLoading) {
       return const SkeletonTenantRentals();
     }
 
     if (_rentals.isEmpty) {
       return Container(
-        color: Colors.white,
-        child: const Center(
-          child: Text('You have no active rentals.', style: TextStyle(fontSize: 18, color: Colors.black54)),
+        color: isDark ? const Color(0xFF121212) : Colors.white,
+        child: Center(
+          child: Text(
+            'You have no active rentals.',
+            style: TextStyle(
+              fontSize: 18,
+              color: isDark ? Colors.white54 : Colors.black54,
+            ),
+          ),
         ),
       );
     }
 
     return Container(
-      color: Colors.white,
+      color: isDark ? const Color(0xFF121212) : Colors.white,
       child: ListView.builder(
         padding: const EdgeInsets.all(24.0),
         itemCount: _rentals.length,
@@ -639,15 +1053,20 @@ class _TenantRentalsTabState extends State<_TenantRentalsTab> {
               ? Map<String, dynamic>.from(rentalRaw)
               : <String, dynamic>{};
           final latestPayment = rental['latest_payment'];
-          
-          final dueDate = _calculateNextDueDate(rental); 
-          final status = latestPayment != null && latestPayment['status'] == 'completed' ? 'Paid' : 'Due';
+
+          final dueDate = _calculateNextDueDate(rental);
+          final status =
+              latestPayment != null && latestPayment['status'] == 'completed'
+              ? 'Paid'
+              : 'Due';
 
           return Card(
             elevation: 2,
             margin: const EdgeInsets.only(bottom: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            color: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
             child: Padding(
               padding: const EdgeInsets.all(20.0),
               child: Column(
@@ -656,17 +1075,38 @@ class _TenantRentalsTabState extends State<_TenantRentalsTab> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(rental['title'] ?? 'Property Title', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      Text(
+                        rental['title'] ?? 'Property Title',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
-                          color: status == 'Paid' ? Colors.green.shade50 : Colors.red.shade50,
+                          color: status == 'Paid'
+                              ? (isDark
+                                    ? Colors.green.withOpacity(0.2)
+                                    : Colors.green.shade50)
+                              : (isDark
+                                    ? Colors.red.withOpacity(0.2)
+                                    : Colors.red.shade50),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: status == 'Paid' ? Colors.green : Colors.red),
+                          border: Border.all(
+                            color: status == 'Paid' ? Colors.green : Colors.red,
+                          ),
                         ),
                         child: Text(
-                          status, 
-                          style: TextStyle(fontWeight: FontWeight.bold, color: status == 'Paid' ? Colors.green : Colors.red)
+                          status,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: status == 'Paid' ? Colors.green : Colors.red,
+                          ),
                         ),
                       ),
                     ],
@@ -674,9 +1114,18 @@ class _TenantRentalsTabState extends State<_TenantRentalsTab> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.location_on, size: 16, color: Colors.black54),
+                      Icon(
+                        Icons.location_on,
+                        size: 16,
+                        color: isDark ? Colors.white54 : Colors.black54,
+                      ),
                       const SizedBox(width: 4),
-                      Text(rental['location'] ?? 'Location', style: const TextStyle(color: Colors.black54)),
+                      Text(
+                        rental['location'] ?? 'Location',
+                        style: TextStyle(
+                          color: isDark ? Colors.white54 : Colors.black54,
+                        ),
+                      ),
                     ],
                   ),
                   const Padding(
@@ -692,58 +1141,103 @@ class _TenantRentalsTabState extends State<_TenantRentalsTab> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Monthly Rent', style: TextStyle(color: Colors.black54)),
+                          Text(
+                            'Monthly Rent',
+                            style: TextStyle(
+                              color: isDark ? Colors.white54 : Colors.black54,
+                            ),
+                          ),
                           const SizedBox(height: 4),
-                          Text('ZMW ${rental['rent_amount'] ?? rental['price'] ?? 0}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          Text(
+                            'ZMW ${rental['rent_amount'] ?? rental['price'] ?? 0}',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
                         ],
                       ),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Next Due Date', style: TextStyle(color: Colors.black54)),
+                          Text(
+                            'Next Due Date',
+                            style: TextStyle(
+                              color: isDark ? Colors.white54 : Colors.black54,
+                            ),
+                          ),
                           const SizedBox(height: 4),
-                          Text(dueDate, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                          Text(
+                            dueDate,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
                         ],
                       ),
                       ElevatedButton(
-                        onPressed: status == 'Paid' ? null : () {
-                          // Implement pay rent flow by switching to payments tab
-                          final state = context.findAncestorStateOfType<_TenantDashboardState>();
-                          if (state != null) {
-                            state.setState(() {
-                              state._selectedIndex = 2; // Payments tab index
-                            });
-                          }
-                        },
+                        onPressed: status == 'Paid'
+                            ? null
+                            : () {
+                                // Implement pay rent flow by switching to payments tab
+                                final state = context
+                                    .findAncestorStateOfType<
+                                      _TenantDashboardState
+                                    >();
+                                if (state != null) {
+                                  state.setState(() {
+                                    state._selectedIndex =
+                                        2; // Payments tab index
+                                  });
+                                }
+                              },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: status == 'Paid' ? Colors.grey : const Color(0xFFFFC107),
+                          backgroundColor: status == 'Paid'
+                              ? Colors.grey
+                              : const Color(0xFFFFC107),
                           foregroundColor: Colors.black87,
                         ),
-                        child: Text(status == 'Paid' ? 'Paid' : 'Pay Rent', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      )
+                        child: Text(
+                          status == 'Paid' ? 'Paid' : 'Pay Rent',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
+                      color: isDark
+                          ? const Color(0xFF1E1E1E)
+                          : Colors.grey.shade50,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.person, color: Colors.black54),
+                        Icon(
+                          Icons.person,
+                          color: isDark ? Colors.white54 : Colors.black54,
+                        ),
                         const SizedBox(width: 8),
-                        Text('Landlord: ${rental['landlord_name'] ?? 'N/A'}'),
+                        Text(
+                          'Landlord: ${rental['landlord_name'] ?? 'N/A'}',
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
                         const Spacer(),
                         IconButton(
                           icon: const Icon(Icons.phone, color: Colors.blue),
                           onPressed: () {},
                           tooltip: 'Call Landlord',
-                        )
+                        ),
                       ],
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
@@ -764,6 +1258,7 @@ class _TenantPaymentsTab extends StatefulWidget {
 class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
   List<dynamic> _payments = [];
   List<dynamic> _premiumContacts = [];
+  Map<String, dynamic>? _rentalInfo;
   bool _isLoading = true;
   String? _selectedProofImagePath;
 
@@ -776,7 +1271,7 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
   Future<void> _loadPayments() async {
     try {
       final data = await ApiService.fetchTenantDashboardData();
-      
+
       // Fetch Premium Contact History directly from dashboard to avoid touching api_service heavily
       List<dynamic> premiumData = [];
       try {
@@ -785,10 +1280,7 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
         final response = await http.post(
           Uri.parse('https://houseforrent.site/api/tenant_contact_payment.php'),
           headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-          body: {
-            'action': 'history',
-            'user_id': userId,
-          },
+          body: {'action': 'history', 'user_id': userId},
         );
         if (response.statusCode == 200) {
           final decoded = jsonDecode(response.body);
@@ -804,11 +1296,13 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
         setState(() {
           _payments = data['payment_history'] ?? [];
           _premiumContacts = premiumData;
+          _rentalInfo = data['rental_info'] is Map
+              ? Map<String, dynamic>.from(data['rental_info'] as Map)
+              : null;
           _isLoading = false;
         });
       }
-    } catch (e) {
-      debugPrint('Failed to load tenant payments: $e');
+    } catch (_) {
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -822,7 +1316,9 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator(color: Color(0xFFFFC107))),
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFFFFC107)),
+      ),
     );
 
     try {
@@ -831,12 +1327,17 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
       final data = await ApiService.fetchTenantDashboardData();
       final rentalInfo = data['rental_info'];
       final rentalsList = await ApiService.fetchMyRentals();
-      
+
       if (!context.mounted) return;
       Navigator.pop(context); // Close loading dialog
 
       if (rentalsList.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No active rental found to make a payment for.'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No active rental found to make a payment for.'),
+            backgroundColor: Colors.red,
+          ),
+        );
         return;
       }
 
@@ -844,11 +1345,26 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
       final activeRental = rentalsList.first;
 
       String selectedRentalId = activeRental['id']?.toString() ?? '';
-      String amount = (activeRental['rent_amount'] ?? activeRental['price'] ?? '0').toString();
-      
+      String amount =
+          (activeRental['rent_amount'] ?? activeRental['price'] ?? '0')
+              .toString();
+
       // Auto-calculate the next month for the default Month/Year value
       final now = DateTime.now();
-      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const monthNames = [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
+      ];
       int nextMonthIndex = now.day > 5 ? now.month : now.month - 1;
       int year = now.year;
       if (nextMonthIndex == 12) {
@@ -856,38 +1372,54 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
         year++;
       }
       String monthYear = '${monthNames[nextMonthIndex]} $year';
-      
+
       String paymentMethod = 'Bank Transfer';
-      
+
       // Generate a 16-digit reference number (e.g. 1774380755123456)
       String generateRef() {
-        String timestamp = DateTime.now().millisecondsSinceEpoch.toString(); // 13 digits
-        String random = (100 + (DateTime.now().microsecond % 900)).toString(); // 3 digits
+        String timestamp = DateTime.now().millisecondsSinceEpoch
+            .toString(); // 13 digits
+        String random = (100 + (DateTime.now().microsecond % 900))
+            .toString(); // 3 digits
         return timestamp + random;
       }
-      String referenceNumber = generateRef();
-      
+
+      String referenceNumber =
+          (activeRental['payment_reference'] ??
+                  rentalInfo?['payment_reference'] ??
+                  '')
+              .toString()
+              .trim();
+      if (referenceNumber.isEmpty) {
+        referenceNumber = generateRef();
+      }
+
       // Extract dealer payment details
       String dealerBankName = rentalInfo?['bank_name'] ?? 'Not provided';
       String dealerBankAccount = rentalInfo?['bank_account'] ?? 'Not provided';
       String dealerMobileMoney = rentalInfo?['dealer_phone'] ?? 'Not provided';
-      
+
       _selectedProofImagePath = null;
       bool isSubmitting = false;
 
       showDialog(
         context: context,
         builder: (context) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
           return StatefulBuilder(
             builder: (context, setDialogState) {
               return Dialog(
-                backgroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                backgroundColor: isDark
+                    ? const Color(0xFF2C2C2C)
+                    : Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Container(
                   width: 500,
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: SingleChildScrollView(
@@ -898,11 +1430,23 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Make a Payment', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
+                            Text(
+                              'Make a Payment',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: isDark
+                                    ? Colors.white
+                                    : const Color(0xFF1F2937),
+                              ),
+                            ),
                             IconButton(
-                              icon: const Icon(Icons.close),
+                              icon: Icon(
+                                Icons.close,
+                                color: isDark ? Colors.white70 : Colors.black87,
+                              ),
                               onPressed: () => Navigator.pop(context),
-                            )
+                            ),
                           ],
                         ),
                         const SizedBox(height: 24),
@@ -912,17 +1456,52 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Rental Property', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4B5563))),
+                                  Text(
+                                    'Rental Property',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark
+                                          ? Colors.white70
+                                          : const Color(0xFF4B5563),
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   TextFormField(
-                                    initialValue: activeRental['title'] ?? 'Unknown Property',
+                                    initialValue:
+                                        activeRental['title'] ??
+                                        'Unknown Property',
                                     readOnly: true,
+                                    style: TextStyle(
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black87,
+                                    ),
                                     decoration: InputDecoration(
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 14,
+                                          ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(
+                                          color: isDark
+                                              ? Colors.white12
+                                              : Colors.grey.shade300,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(
+                                          color: isDark
+                                              ? Colors.white12
+                                              : Colors.grey.shade300,
+                                        ),
+                                      ),
                                       filled: true,
-                                      fillColor: Colors.grey.shade100,
+                                      fillColor: isDark
+                                          ? const Color(0xFF1E1E1E)
+                                          : Colors.grey.shade100,
                                     ),
                                   ),
                                 ],
@@ -933,17 +1512,50 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Reference No.', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4B5563))),
+                                  Text(
+                                    'Reference No.',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark
+                                          ? Colors.white70
+                                          : const Color(0xFF4B5563),
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   TextFormField(
                                     initialValue: referenceNumber,
                                     readOnly: true,
+                                    style: TextStyle(
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black87,
+                                    ),
                                     decoration: InputDecoration(
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 14,
+                                          ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(
+                                          color: isDark
+                                              ? Colors.white12
+                                              : Colors.grey.shade300,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(
+                                          color: isDark
+                                              ? Colors.white12
+                                              : Colors.grey.shade300,
+                                        ),
+                                      ),
                                       filled: true,
-                                      fillColor: Colors.grey.shade100,
+                                      fillColor: isDark
+                                          ? const Color(0xFF1E1E1E)
+                                          : Colors.grey.shade100,
                                     ),
                                   ),
                                 ],
@@ -958,15 +1570,55 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Amount (ZMW)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4B5563))),
+                                  Text(
+                                    'Amount (ZMW)',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark
+                                          ? Colors.white70
+                                          : const Color(0xFF4B5563),
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   TextFormField(
                                     initialValue: amount,
+                                    style: TextStyle(
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black87,
+                                    ),
                                     decoration: InputDecoration(
                                       prefixText: 'K ',
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
+                                      prefixStyle: TextStyle(
+                                        color: isDark
+                                            ? Colors.white54
+                                            : Colors.black54,
+                                      ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 14,
+                                          ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(
+                                          color: isDark
+                                              ? Colors.white12
+                                              : Colors.grey.shade300,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(
+                                          color: isDark
+                                              ? Colors.white12
+                                              : Colors.grey.shade300,
+                                        ),
+                                      ),
+                                      filled: true,
+                                      fillColor: isDark
+                                          ? const Color(0xFF1E1E1E)
+                                          : Colors.white,
                                     ),
                                     keyboardType: TextInputType.number,
                                     onChanged: (val) => amount = val,
@@ -979,14 +1631,34 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Month/Year', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4B5563))),
+                                  const Text(
+                                    'Month/Year',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF4B5563),
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   TextFormField(
                                     initialValue: monthYear,
                                     decoration: InputDecoration(
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 14,
+                                          ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(
+                                          color: Colors.grey.shade300,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(
+                                          color: Colors.grey.shade300,
+                                        ),
+                                      ),
                                     ),
                                     onChanged: (val) => monthYear = val,
                                   ),
@@ -996,19 +1668,47 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        const Text('Payment Method', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4B5563))),
+                        const Text(
+                          'Payment Method',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF4B5563),
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         DropdownButtonFormField<String>(
                           value: paymentMethod,
                           decoration: InputDecoration(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
+                            ),
                           ),
                           items: const [
-                            DropdownMenuItem(value: 'Bank Transfer', child: Text('Bank Transfer')),
-                            DropdownMenuItem(value: 'Mobile Money', child: Text('Mobile Money')),
-                            DropdownMenuItem(value: 'Cash', child: Text('Cash')),
+                            DropdownMenuItem(
+                              value: 'Bank Transfer',
+                              child: Text('Bank Transfer'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Mobile Money',
+                              child: Text('Mobile Money'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Cash',
+                              child: Text('Cash'),
+                            ),
                           ],
                           onChanged: (value) {
                             if (value != null) {
@@ -1032,31 +1732,59 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Payment Instructions', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+                                const Text(
+                                  'Payment Instructions',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue,
+                                  ),
+                                ),
                                 const SizedBox(height: 8),
                                 if (paymentMethod == 'Bank Transfer') ...[
                                   Text('Bank: $dealerBankName'),
                                   Text('Account: $dealerBankAccount'),
                                 ] else if (paymentMethod == 'Mobile Money') ...[
-                                  Text('Mobile Money Number: $dealerMobileMoney'),
+                                  Text(
+                                    'Mobile Money Number: $dealerMobileMoney',
+                                  ),
                                 ],
                                 const SizedBox(height: 8),
-                                const Text('Please use the Reference No. above as your payment reference.', style: TextStyle(fontStyle: FontStyle.italic, fontSize: 12)),
+                                const Text(
+                                  'Please use the Reference No. above as your payment reference.',
+                                  style: TextStyle(
+                                    fontStyle: FontStyle.italic,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
                           const SizedBox(height: 16),
-                          const Text('Upload Proof of Payment (Image/PDF)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4B5563))),
+                          const Text(
+                            'Upload Proof of Payment (Image/PDF)',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF4B5563),
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           InkWell(
                             onTap: () async {
-                              FilePickerResult? result = await FilePicker.platform.pickFiles(
-                                type: FileType.custom,
-                                allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
-                              );
+                              FilePickerResult? result = await FilePicker
+                                  .platform
+                                  .pickFiles(
+                                    type: FileType.custom,
+                                    allowedExtensions: [
+                                      'jpg',
+                                      'jpeg',
+                                      'png',
+                                      'pdf',
+                                    ],
+                                  );
                               if (result != null) {
                                 setDialogState(() {
-                                  _selectedProofImagePath = result.files.single.path;
+                                  _selectedProofImagePath =
+                                      result.files.single.path;
                                 });
                               }
                             },
@@ -1064,19 +1792,34 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
                               width: double.infinity,
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade400, style: BorderStyle.solid),
+                                border: Border.all(
+                                  color: Colors.grey.shade400,
+                                  style: BorderStyle.solid,
+                                ),
                                 borderRadius: BorderRadius.circular(8),
                                 color: Colors.grey.shade50,
                               ),
                               child: Column(
                                 children: [
-                                  Icon(Icons.upload_file, color: Colors.blue.shade400, size: 32),
+                                  Icon(
+                                    Icons.upload_file,
+                                    color: Colors.blue.shade400,
+                                    size: 32,
+                                  ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    _selectedProofImagePath != null 
-                                        ? _selectedProofImagePath!.split('\\').last.split('/').last 
+                                    _selectedProofImagePath != null
+                                        ? _selectedProofImagePath!
+                                              .split('\\')
+                                              .last
+                                              .split('/')
+                                              .last
                                         : 'Tap to select file',
-                                    style: TextStyle(color: _selectedProofImagePath != null ? Colors.green : Colors.black54),
+                                    style: TextStyle(
+                                      color: _selectedProofImagePath != null
+                                          ? Colors.green
+                                          : Colors.black54,
+                                    ),
                                     textAlign: TextAlign.center,
                                   ),
                                 ],
@@ -1091,68 +1834,130 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
                           width: double.infinity,
                           height: 50,
                           child: ElevatedButton(
-                            onPressed: isSubmitting ? null : () async {
-                              if (paymentMethod != 'Cash' && _selectedProofImagePath == null) {
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please upload a proof of payment')));
-                                return;
-                              }
-                              
-                              setDialogState(() => isSubmitting = true);
-                              try {
-                                final res = await ApiService.uploadTenantProof(
-                                  selectedRentalId, 
-                                  monthYear, 
-                                  amount, 
-                                  paymentMethod,
-                                  referenceNumber,
-                                  _selectedProofImagePath
-                                );
-                                if (context.mounted) {
-                                  Navigator.pop(context);
-                                  if (res['status'] == 'success') {
-                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment submitted successfully!'), backgroundColor: Colors.green));
-                                    _loadPayments();
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Failed to submit payment'), backgroundColor: Colors.red));
-                                  }
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(AppError.userMessage(e, fallback: 'Unable to submit payment right now.')),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                  setDialogState(() => isSubmitting = false);
-                                }
-                              }
-                            },
+                            onPressed: isSubmitting
+                                ? null
+                                : () async {
+                                    if (paymentMethod != 'Cash' &&
+                                        _selectedProofImagePath == null) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Please upload a proof of payment',
+                                          ),
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    setDialogState(() => isSubmitting = true);
+                                    try {
+                                      final res =
+                                          await ApiService.uploadTenantProof(
+                                            selectedRentalId,
+                                            monthYear,
+                                            amount,
+                                            paymentMethod,
+                                            referenceNumber,
+                                            _selectedProofImagePath,
+                                          );
+                                      if (context.mounted) {
+                                        Navigator.pop(context);
+                                        if (res['status'] == 'success') {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Payment submitted successfully!',
+                                              ),
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+                                          _loadPayments();
+                                        } else {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                res['message'] ??
+                                                    'Failed to submit payment',
+                                              ),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              AppError.userMessage(
+                                                e,
+                                                fallback:
+                                                    'Unable to submit payment right now.',
+                                              ),
+                                            ),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                        setDialogState(
+                                          () => isSubmitting = false,
+                                        );
+                                      }
+                                    }
+                                  },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF5A3D31),
                               foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                            child: isSubmitting 
-                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                : const Text('Submit Payment', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            child: isSubmitting
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Submit Payment',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                           ),
-                        )
+                        ),
                       ],
                     ),
                   ),
                 ),
               );
-            }
+            },
           );
         },
       );
-
     } catch (e) {
       if (!context.mounted) return;
       Navigator.pop(context); // Close loading dialog
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppError.userMessage(e, fallback: 'Unable to load rental information.'))),
+        SnackBar(
+          content: Text(
+            AppError.userMessage(
+              e,
+              fallback: 'Unable to load rental information.',
+            ),
+          ),
+        ),
       );
     }
   }
@@ -1163,6 +1968,13 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
       return const SkeletonTenantTable();
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = Theme.of(context).colorScheme;
+    final secondaryTextColor = colors.onSurfaceVariant;
+    final bankPaymentId = (_rentalInfo?['payment_reference'] ?? '')
+        .toString()
+        .trim();
+
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -1171,30 +1983,131 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Payment History', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-              ElevatedButton.icon(
-                onPressed: () => _showMakePaymentDialog(context),
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Make Payment', style: TextStyle(fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFC107), // Updated to yellow
-                  foregroundColor: Colors.black87,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  elevation: 0,
+              const Text(
+                'Payment History',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const TenantRentSupportScreen(),
                 ),
+              );
+            },
+                    icon: const Icon(Icons.support_agent_outlined, size: 18),
+                    label: const Text('Help'),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () => _showMakePaymentDialog(context),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text(
+                      'Make Payment',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFFC107),
+                      foregroundColor: Colors.black87,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
+          const SizedBox(height: 8),
+          Text(
+            'Payment dispute or maintenance issue? Tap Help to chat with admin or report a leak.',
+            style: TextStyle(color: secondaryTextColor, fontSize: 13),
+          ),
           const SizedBox(height: 24),
-          
+
+          if (bankPaymentId.isNotEmpty) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: colors.primaryContainer.withValues(alpha: 0.45),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: colors.primary.withValues(alpha: 0.35),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.account_balance_outlined, color: colors.primary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Bank payment ID',
+                          style: TextStyle(color: colors.onSurfaceVariant),
+                        ),
+                        const SizedBox(height: 3),
+                        SelectableText(
+                          bankPaymentId,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          'Use this ID as your reference when paying rent through the bank.',
+                          style: TextStyle(
+                            color: colors.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Copy bank payment ID',
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: bankPaymentId));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Bank payment ID copied.'),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.copy_outlined),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+
           Expanded(
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (_premiumContacts.isNotEmpty) ...[
-                    const Text('Premium Contact Access (One-Time)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Premium Contact Access (One-Time)',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     ListView.builder(
                       shrinkWrap: true,
@@ -1203,16 +2116,22 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
                       itemBuilder: (context, index) {
                         final premium = _premiumContacts[index];
                         final status = premium['status'] ?? 'pending';
-                        
+
                         Color statusColor = Colors.orange;
-                        if (status == 'active' || status == 'successful' || status == 'approved' || status == 'completed') statusColor = Colors.green;
+                        if (status == 'active' ||
+                            status == 'successful' ||
+                            status == 'approved' ||
+                            status == 'completed')
+                          statusColor = Colors.green;
                         if (status == 'failed') statusColor = Colors.red;
 
                         return Card(
                           margin: const EdgeInsets.only(bottom: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           elevation: 2,
-                          color: Colors.white,
+                          color: Theme.of(context).cardColor,
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Row(
@@ -1220,38 +2139,75 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
                                 Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Colors.amber.shade50,
+                                    color: isDark
+                                        ? Colors.amber.withValues(alpha: .16)
+                                        : Colors.amber.shade50,
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(Icons.star, color: Colors.amber),
+                                  child: const Icon(
+                                    Icons.star,
+                                    color: Colors.amber,
+                                  ),
                                 ),
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      const Text('Tenant Pro Access', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                      const Text(
+                                        'Tenant Pro Access',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
                                       const SizedBox(height: 4),
-                                      Text('Method: ${premium['payment_type'] ?? 'N/A'} ${premium['operator'] != null ? '(${premium['operator']})' : ''}', style: const TextStyle(color: Colors.black54, fontSize: 13)),
+                                      Text(
+                                        'Method: ${premium['payment_type'] ?? 'N/A'} ${premium['operator'] != null ? '(${premium['operator']})' : ''}',
+                                        style: TextStyle(
+                                          color: secondaryTextColor,
+                                          fontSize: 13,
+                                        ),
+                                      ),
                                       const SizedBox(height: 4),
-                                      Text('Date: ${premium['created_at']?.substring(0, 10) ?? 'N/A'}', style: const TextStyle(color: Colors.black54, fontSize: 12)),
+                                      Text(
+                                        'Date: ${premium['created_at']?.substring(0, 10) ?? 'N/A'}',
+                                        style: TextStyle(
+                                          color: secondaryTextColor,
+                                          fontSize: 12,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
-                                    Text('ZMW ${premium['amount_paid'] ?? '5.00'}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                    Text(
+                                      'ZMW ${premium['amount_paid'] ?? '5.00'}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
                                     const SizedBox(height: 8),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: statusColor.withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
                                         status.toString().toUpperCase(),
-                                        style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 12),
+                                        style: TextStyle(
+                                          color: statusColor,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -1266,14 +2222,38 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
                     const Divider(),
                     const SizedBox(height: 24),
                   ],
-                  
-                  const Text('Rent Payments', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 16),
+
+                  const Text(
+                    'Rent Payments',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const TenantRentSupportScreen(),
+                ),
+              );
+            },
+                      icon: const Icon(Icons.support_agent_outlined),
+                      label: const Text('Dispute payment or report maintenance'),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   if (_payments.isEmpty)
-                    const Center(
+                    Center(
                       child: Padding(
-                        padding: EdgeInsets.all(32.0),
-                        child: Text('No rent payment history found.', style: TextStyle(fontSize: 18, color: Colors.black54)),
+                        padding: const EdgeInsets.all(32.0),
+                        child: Text(
+                          'No rent payment history found.',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: secondaryTextColor,
+                          ),
+                        ),
                       ),
                     )
                   else
@@ -1284,16 +2264,18 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
                       itemBuilder: (context, index) {
                         final payment = _payments[index];
                         final status = payment['status'] ?? 'pending';
-                        
+
                         Color statusColor = Colors.orange;
                         if (status == 'approved') statusColor = Colors.green;
                         if (status == 'rejected') statusColor = Colors.red;
 
                         return Card(
                           margin: const EdgeInsets.only(bottom: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           elevation: 2,
-                          color: Colors.white,
+                          color: Theme.of(context).cardColor,
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Row(
@@ -1301,38 +2283,76 @@ class _TenantPaymentsTabState extends State<_TenantPaymentsTab> {
                                 Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Colors.blue.shade50,
+                                    color: isDark
+                                        ? Colors.blue.withValues(alpha: .16)
+                                        : Colors.blue.shade50,
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(Icons.receipt_long, color: Colors.blue),
+                                  child: const Icon(
+                                    Icons.receipt_long,
+                                    color: Colors.blue,
+                                  ),
                                 ),
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text(payment['property_title'] ?? 'Property Rent', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                      Text(
+                                        payment['property_title'] ??
+                                            'Property Rent',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
                                       const SizedBox(height: 4),
-                                      Text('Month: ${payment['month_year'] ?? 'N/A'} • Method: ${payment['payment_method'] ?? 'N/A'}', style: const TextStyle(color: Colors.black54, fontSize: 13)),
+                                      Text(
+                                        'Month: ${payment['month_year'] ?? 'N/A'} • Method: ${payment['payment_method'] ?? 'N/A'}',
+                                        style: TextStyle(
+                                          color: secondaryTextColor,
+                                          fontSize: 13,
+                                        ),
+                                      ),
                                       const SizedBox(height: 4),
-                                      Text('Date: ${payment['created_at']?.substring(0, 10) ?? 'N/A'}', style: const TextStyle(color: Colors.black54, fontSize: 12)),
+                                      Text(
+                                        'Date: ${payment['created_at']?.substring(0, 10) ?? 'N/A'}',
+                                        style: TextStyle(
+                                          color: secondaryTextColor,
+                                          fontSize: 12,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
-                                    Text('${payment['currency'] ?? 'ZMW'} ${payment['amount'] ?? '0.00'}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                    Text(
+                                      '${payment['currency'] ?? 'ZMW'} ${payment['amount'] ?? '0.00'}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
                                     const SizedBox(height: 8),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: statusColor.withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
                                         status.toString().toUpperCase(),
-                                        style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold),
+                                        style: TextStyle(
+                                          color: statusColor,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -1383,7 +2403,10 @@ class _TenantSavedTabState extends State<_TenantSavedTab> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = AppError.userMessage(e, fallback: 'Unable to load saved properties.');
+          _errorMessage = AppError.userMessage(
+            e,
+            fallback: 'Unable to load saved properties.',
+          );
           _isLoading = false;
         });
       }
@@ -1396,8 +2419,11 @@ class _TenantSavedTabState extends State<_TenantSavedTab> {
       return const SkeletonTenantRentals();
     }
 
+    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      color: Colors.white,
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -1409,9 +2435,22 @@ class _TenantSavedTabState extends State<_TenantSavedTab> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Saved Properties', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A))),
+                    Text(
+                      'Saved Properties',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: colors.onSurface,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    const Text('Your favorite listings.', style: TextStyle(fontSize: 14, color: Colors.black54)),
+                    Text(
+                      'Your favorite listings.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
                   ],
                 ),
                 ElevatedButton.icon(
@@ -1419,12 +2458,20 @@ class _TenantSavedTabState extends State<_TenantSavedTab> {
                     context.go('/home');
                   },
                   icon: const Icon(Icons.search, size: 18),
-                  label: const Text('Browse More', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: const Text(
+                    'Browse More',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFFC107),
                     foregroundColor: Colors.black87,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     elevation: 0,
                   ),
                 ),
@@ -1432,13 +2479,20 @@ class _TenantSavedTabState extends State<_TenantSavedTab> {
             ),
             const SizedBox(height: 24),
             if (_errorMessage != null)
-               Expanded(child: Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.red))))
+              Expanded(
+                child: Center(
+                  child: Text(
+                    _errorMessage!,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
+              )
             else if (_saved.isEmpty)
               Expanded(
                 child: Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
@@ -1447,16 +2501,33 @@ class _TenantSavedTabState extends State<_TenantSavedTab> {
                         offset: const Offset(0, 4),
                       ),
                     ],
-                    border: Border.all(color: Colors.grey.shade100),
+                    border: Border.all(
+                      color: isDark ? Colors.white12 : Colors.grey.shade100,
+                    ),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.favorite_border, size: 64, color: Colors.grey.shade400),
+                      Icon(
+                        Icons.favorite_border,
+                        size: 64,
+                        color: Colors.grey.shade400,
+                      ),
                       const SizedBox(height: 16),
-                      const Text('No saved properties yet', style: TextStyle(fontSize: 20, color: Colors.black54)),
+                      Text(
+                        'No saved properties yet',
+                        style: TextStyle(
+                          fontSize: 20,
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
                       const SizedBox(height: 8),
-                      const Text('Start browsing and save properties you like!', style: TextStyle(color: Colors.black45)),
+                      Text(
+                        'Start browsing and save properties you like!',
+                        style: TextStyle(
+                          color: colors.onSurfaceVariant.withValues(alpha: .8),
+                        ),
+                      ),
                       const SizedBox(height: 24),
                       ElevatedButton(
                         onPressed: () {
@@ -1465,11 +2536,19 @@ class _TenantSavedTabState extends State<_TenantSavedTab> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFFFC107),
                           foregroundColor: Colors.black87,
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                           elevation: 0,
                         ),
-                        child: const Text('Browse Properties', style: TextStyle(fontWeight: FontWeight.bold)),
+                        child: const Text(
+                          'Browse Properties',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ],
                   ),
@@ -1479,28 +2558,32 @@ class _TenantSavedTabState extends State<_TenantSavedTab> {
               Expanded(
                 child: GridView.builder(
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: MediaQuery.of(context).size.width > 800 ? 4 : (MediaQuery.of(context).size.width > 500 ? 3 : 2),
-                    childAspectRatio: MediaQuery.of(context).size.width < 400 ? 0.52 : 0.60, // Further reduced aspect ratio to fix bottom overflow completely
+                    crossAxisCount: MediaQuery.of(context).size.width > 800
+                        ? 4
+                        : (MediaQuery.of(context).size.width > 500 ? 3 : 2),
+                    childAspectRatio: MediaQuery.of(context).size.width < 400
+                        ? 0.52
+                        : 0.60, // Further reduced aspect ratio to fix bottom overflow completely
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
                   ),
                   itemCount: _saved.length,
                   itemBuilder: (context, index) {
-                        // Map the API output to the format PropertyCard expects
-                      final property = Map<String, dynamic>.from(_saved[index]);
-                      
-                      // Convert formatted URL strings back into a list format if needed for PropertyCard fallback
-                      // But since PropertyCard now correctly parses `main_image` directly, we don't need to do much!
-                      if (property['main_image'] != null) {
-                        // Clean up any literal backticks if they exist
-                        String mainImg = property['main_image'].toString().trim();
-                        property['main_image'] = mainImg.replaceAll('`', '');
-                      }
-                      
-                      return PropertyCard(
-                        property: property,
-                        isFeatured: property['is_featured']?.toString() == '1',
-                      ); 
+                    // Map the API output to the format PropertyCard expects
+                    final property = Map<String, dynamic>.from(_saved[index]);
+
+                    // Convert formatted URL strings back into a list format if needed for PropertyCard fallback
+                    // But since PropertyCard now correctly parses `main_image` directly, we don't need to do much!
+                    if (property['main_image'] != null) {
+                      // Clean up any literal backticks if they exist
+                      String mainImg = property['main_image'].toString().trim();
+                      property['main_image'] = mainImg.replaceAll('`', '');
+                    }
+
+                    return PropertyCard(
+                      property: property,
+                      isFeatured: property['is_featured']?.toString() == '1',
+                    );
                   },
                 ),
               ),
@@ -1538,19 +2621,18 @@ class _TenantProfileTabState extends State<_TenantProfileTab> {
   Future<void> _fetchProfile() async {
     try {
       final data = await ApiService.getProfile();
-      
+
       bool isPro = data['is_pro'] == true;
       try {
         final userId = data['id']?.toString() ?? '';
-        
+
         if (userId.isNotEmpty) {
           final response = await http.post(
-            Uri.parse('https://houseforrent.site/api/tenant_contact_payment.php'),
+            Uri.parse(
+              'https://houseforrent.site/api/tenant_contact_payment.php',
+            ),
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: {
-              'action': 'get_status',
-              'user_id': userId,
-            },
+            body: {'action': 'get_status', 'user_id': userId},
           );
           if (response.statusCode == 200) {
             final decoded = jsonDecode(response.body);
@@ -1575,7 +2657,10 @@ class _TenantProfileTabState extends State<_TenantProfileTab> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = AppError.userMessage(e, fallback: 'Unable to load profile details.');
+          _errorMessage = AppError.userMessage(
+            e,
+            fallback: 'Unable to load profile details.',
+          );
           _isLoading = false;
         });
       }
@@ -1590,17 +2675,25 @@ class _TenantProfileTabState extends State<_TenantProfileTab> {
     });
 
     try {
-      await ApiService.updateProfile(_nameController.text, _phoneController.text);
+      await ApiService.updateProfile(
+        _nameController.text,
+        _phoneController.text,
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully!'), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text('Profile updated successfully!'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppError.userMessage(e, fallback: 'Failed to update profile.')),
+            content: Text(
+              AppError.userMessage(e, fallback: 'Failed to update profile.'),
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -1629,11 +2722,16 @@ class _TenantProfileTabState extends State<_TenantProfileTab> {
     }
 
     if (_errorMessage != null) {
-      return Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)));
+      return Center(
+        child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
+      );
     }
 
+    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      color: Colors.white,
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Center(
@@ -1644,16 +2742,18 @@ class _TenantProfileTabState extends State<_TenantProfileTab> {
               width: double.infinity,
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.05),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
-                  )
+                  ),
                 ],
-                border: Border.all(color: Colors.grey.shade100),
+                border: Border.all(
+                  color: isDark ? Colors.white12 : Colors.grey.shade100,
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1663,15 +2763,21 @@ class _TenantProfileTabState extends State<_TenantProfileTab> {
                     children: [
                       const Expanded(
                         child: Text(
-                          'Profile Settings', 
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                          'Profile Settings',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       const SizedBox(width: 8),
                       if (_isPro)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFFC107).withOpacity(0.2),
                             borderRadius: BorderRadius.circular(20),
@@ -1680,26 +2786,55 @@ class _TenantProfileTabState extends State<_TenantProfileTab> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: const [
-                              Icon(Icons.verified, size: 16, color: Color(0xFFD4A000)),
+                              Icon(
+                                Icons.verified,
+                                size: 16,
+                                color: Color(0xFFD4A000),
+                              ),
                               SizedBox(width: 4),
-                              Text('PRO', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFD4A000))),
+                              Text(
+                                'PRO',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFD4A000),
+                                ),
+                              ),
                             ],
                           ),
                         )
                       else
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
+                            color: isDark
+                                ? Colors.white.withValues(alpha: .08)
+                                : Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.grey.shade300),
+                            border: Border.all(
+                              color: isDark
+                                  ? Colors.white24
+                                  : Colors.grey.shade300,
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.lock_outline, size: 16, color: Colors.grey.shade600),
+                              Icon(
+                                Icons.lock_outline,
+                                size: 16,
+                                color: colors.onSurfaceVariant,
+                              ),
                               const SizedBox(width: 4),
-                              Text('Unlock Pro', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey.shade600)),
+                              Text(
+                                'Unlock Pro',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: colors.onSurfaceVariant,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -1711,8 +2846,14 @@ class _TenantProfileTabState extends State<_TenantProfileTab> {
                       children: [
                         CircleAvatar(
                           radius: 60,
-                          backgroundColor: Colors.grey.shade200,
-                          child: const Icon(Icons.person, size: 60, color: Colors.grey),
+                          backgroundColor: isDark
+                              ? Colors.white12
+                              : Colors.grey.shade200,
+                          child: Icon(
+                            Icons.person,
+                            size: 60,
+                            color: colors.onSurfaceVariant,
+                          ),
                         ),
                         Positioned(
                           bottom: 0,
@@ -1723,47 +2864,72 @@ class _TenantProfileTabState extends State<_TenantProfileTab> {
                               color: Color(0xFFFFC107),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.camera_alt, size: 20, color: Colors.black87),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              size: 20,
+                              color: Colors.black87,
+                            ),
                           ),
-                        )
+                        ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 32),
-                  const Text('Full Name', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const Text(
+                    'Full Name',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _nameController,
                     decoration: InputDecoration(
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       prefixIcon: const Icon(Icons.person_outline),
                     ),
-                    validator: (value) => value == null || value.isEmpty ? 'Please enter your name' : null,
+                    validator: (value) => value == null || value.isEmpty
+                        ? 'Please enter your name'
+                        : null,
                   ),
                   const SizedBox(height: 20),
-                  const Text('Email Address', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const Text(
+                    'Email Address',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _emailController,
                     readOnly: true,
                     decoration: InputDecoration(
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       prefixIcon: const Icon(Icons.email_outlined),
                       filled: true,
-                      fillColor: Colors.grey.shade50,
+                      fillColor: isDark
+                          ? colors.surfaceContainerHighest
+                          : Colors.grey.shade50,
                     ),
                   ),
                   const SizedBox(height: 20),
-                  const Text('Phone Number', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const Text(
+                    'Phone Number',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _phoneController,
                     decoration: InputDecoration(
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       prefixIcon: const Icon(Icons.phone_outlined),
                     ),
                     keyboardType: TextInputType.phone,
-                    validator: (value) => value == null || value.isEmpty ? 'Please enter your phone number' : null,
+                    validator: (value) => value == null || value.isEmpty
+                        ? 'Please enter your phone number'
+                        : null,
                   ),
                   const SizedBox(height: 32),
                   SizedBox(
@@ -1774,13 +2940,25 @@ class _TenantProfileTabState extends State<_TenantProfileTab> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFFFC107),
                         foregroundColor: Colors.black87,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                      child: _isSaving 
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Text('Save Changes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      child: _isSaving
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text(
+                              'Save Changes',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
-                  )
+                  ),
                 ],
               ),
             ),

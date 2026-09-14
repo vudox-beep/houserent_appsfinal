@@ -17,31 +17,8 @@ $data = json_decode(file_get_contents("php://input"), true);
 if (!$data) $data = $_POST;
 if (!$data) $data = $_GET;
 
-$user_id = $data['user_id'] ?? '';
-
-// Fallback to token if user_id is not explicitly provided
-if (empty($user_id)) {
-    // If auth.php is included, verifyToken() might be available to extract user id
-    if (function_exists('verifyToken')) {
-        // Suppress the exit() inside verifyToken if it fails, or manually check headers
-        $headers = apache_request_headers();
-        if (isset($headers['Authorization'])) {
-            $token = str_replace('Bearer ', '', $headers['Authorization']);
-            $tokenParts = explode('.', $token);
-            if (count($tokenParts) == 3) {
-                $payload = json_decode(base64_decode($tokenParts[1]), true);
-                if (isset($payload['id'])) {
-                    $user_id = $payload['id'];
-                }
-            }
-        }
-    }
-}
-
-if (empty($user_id)) {
-    echo json_encode(['status' => 'error', 'message' => 'User ID required', 'is_locked' => true]);
-    exit;
-}
+$user = authorize(['dealer', 'admin']);
+$user_id = (int)$user['id'];
 
 // Check user role, identity verification, and name, and verification_doc
 $stmtUser = $conn->prepare("SELECT name, role, identity_verified, verification_doc FROM users WHERE id = ?");

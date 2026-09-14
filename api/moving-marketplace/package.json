@@ -1,0 +1,22 @@
+{
+  "name": "houserent-moving-marketplace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Real-time tenant and moving-driver marketplace API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cors": "latest",
+    "dotenv": "latest",
+    "express": "latest",
+    "express-rate-limit": "latest",
+    "helmet": "latest",
+    "mysql2": "latest",
+    "socket.io": "latest"
+  }
+}

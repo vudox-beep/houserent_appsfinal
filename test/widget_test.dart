@@ -18,4 +18,19 @@ void main() {
     // Verify that the title is present
     expect(find.text('HouseRent Africa'), findsWidgets);
   });
+
+  testWidgets('Theme can change without rebuilding stale dependencies', (
+    WidgetTester tester,
+  ) async {
+    appThemeNotifier.value = ThemeMode.light;
+    await tester.pumpWidget(const HouseRentApp());
+    await tester.pump();
+
+    setAppThemeMode(ThemeMode.dark);
+    await tester.pump();
+    await tester.pump();
+
+    expect(appThemeNotifier.value, ThemeMode.dark);
+    expect(tester.takeException(), isNull);
+  });
 }

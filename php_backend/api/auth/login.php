@@ -5,7 +5,8 @@ require_once '../auth.php';
 
 // --- Rate Limiting Start ---
 require_once '../includes/RateLimiter.php';
-$limiter = new RateLimiter(3, 900); // Max 3 login attempts per 900 seconds (15 minutes)
+// Max 5 FAILED attempts per 15 minutes. Successful logins never count.
+$limiter = new RateLimiter(5, 900);
 
 // Get Real IP to support Cloudflare/Proxies
 $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
@@ -16,11 +17,11 @@ if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
     $ip = trim($ips[0]);
 }
 
-if (!$limiter->check($ip . '_login')) {
+if ($limiter->isBlocked($ip . '_login')) {
     http_response_code(200); // Send 200 so Flutter can parse the JSON error easily
     echo json_encode([
         'status' => 'error', 
-        'message' => 'Too many login attempts. Please try again in 15 minutes.',
+        'message' => 'Too many failed login attempts. Please try again in 15 minutes.',
         'code' => 'rate_limited'
     ]);
     exit();
@@ -45,6 +46,7 @@ try {
     $stmt->execute([$data->email]); 
     
     if ($stmt->rowCount() == 0) { 
+        $limiter->record($ip . '_login'); // failed attempt
         http_response_code(200); 
         echo json_encode([
             "status" => "error",
@@ -97,12 +99,53 @@ try {
             } 
             // We no longer block login for inactive subscriptions. 
             // The frontend dashboard will handle the lockout UI. 
-        } 
+        } elseif ($user['role'] === 'agent') {
+            try {
+                $subStmt = $conn->prepare("SELECT subscription_status, subscription_expiry FROM agents WHERE user_id = ? LIMIT 1");
+                $subStmt->execute([$user['id']]);
+                $agentData = $subStmt->fetch(PDO::FETCH_ASSOC);
+                if ($agentData) {
+                    $sub_status = $agentData['subscription_status'] ?? 'inactive';
+                    $expiry = $agentData['subscription_expiry'] ?? null;
+                    if ($sub_status === 'active' && !empty($expiry) && strtotime((string)$expiry) < time()) {
+                        $sub_status = 'expired';
+                        $conn->prepare("UPDATE agents SET subscription_status = 'expired' WHERE user_id = ?")
+                            ->execute([$user['id']]);
+                    }
+                }
+            } catch (Throwable $e) {
+                $sub_status = 'inactive';
+            }
+        } elseif ($user['role'] === 'company') {
+            try {
+                $subStmt = $conn->prepare("SELECT subscription_status, subscription_expiry FROM private_companies WHERE user_id = ? LIMIT 1");
+                $subStmt->execute([$user['id']]);
+                $companyData = $subStmt->fetch(PDO::FETCH_ASSOC);
+                if ($companyData) {
+                    $sub_status = $companyData['subscription_status'] ?? 'inactive';
+                    $expiry = $companyData['subscription_expiry'] ?? null;
+                    if ($sub_status === 'active' && !empty($expiry) && strtotime((string)$expiry) < time()) {
+                        $sub_status = 'expired';
+                        $conn->prepare("UPDATE private_companies SET subscription_status = 'expired' WHERE user_id = ?")
+                            ->execute([$user['id']]);
+                    }
+                }
+            } catch (Throwable $e) {
+                $sub_status = 'inactive';
+            }
+        }
+
+        // Added for drivers only — same email/password login as everyone else.
+        $driver = null;
+        if ($user['role'] === 'driver') {
+            $drvStmt = $conn->prepare("SELECT vehicle_type, vehicle_capacity, vehicle_plate, service_area, availability_status, booking_tokens FROM drivers WHERE user_id = ? LIMIT 1");
+            $drvStmt->execute([$user['id']]);
+            $driver = $drvStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        }
 
         $token = generateToken($user['id'], $user['role']); 
         
-        http_response_code(200); 
-        echo json_encode([ 
+        $response = [ 
             "status" => "success", 
             "id" => $user['id'], 
             "name" => $user['name'], 
@@ -120,8 +163,20 @@ try {
                 "subscription_status" => $sub_status, 
                 "token" => $token 
             ] 
-        ]); 
+        ];
+
+        // Extra fields only when this account is a driver.
+        if ($driver !== null) {
+            $response["driver"] = $driver;
+            $response["user"]["driver"] = $driver;
+        }
+
+        $limiter->clear($ip . '_login'); // successful login resets the counter
+
+        http_response_code(200); 
+        echo json_encode($response); 
     } else { 
+        $limiter->record($ip . '_login'); // failed attempt
         http_response_code(200); 
         echo json_encode([
             "status" => "error",

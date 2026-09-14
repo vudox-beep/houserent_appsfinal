@@ -19,9 +19,10 @@ pluginManagement {
 
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
-    id("com.android.application") version "8.9.1" apply false
-    id("org.jetbrains.kotlin.android") version "2.3.0" apply false
-    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
+    // AGP 9.0.1 + Gradle 9.1 required to run the daemon on Java 25.
+    id("com.android.application") version "9.0.1" apply false
+    id("com.google.gms.google-services") version "4.4.2" apply false
+    id("org.jetbrains.kotlin.android") version "2.2.20" apply false
 }
 
 include(":app")

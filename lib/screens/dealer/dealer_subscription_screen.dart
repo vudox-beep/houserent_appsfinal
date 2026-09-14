@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
+import '../../widgets/skeleton_loader.dart';
 import 'dealer_payment_webview_screen.dart';
 
 class DealerSubscriptionScreen extends StatefulWidget {
   const DealerSubscriptionScreen({super.key});
 
   @override
-  State<DealerSubscriptionScreen> createState() => _DealerSubscriptionScreenState();
+  State<DealerSubscriptionScreen> createState() =>
+      _DealerSubscriptionScreenState();
 }
 
 class _DealerSubscriptionScreenState extends State<DealerSubscriptionScreen> {
@@ -17,6 +20,8 @@ class _DealerSubscriptionScreenState extends State<DealerSubscriptionScreen> {
 
   Map<String, dynamic>? _subscription;
   bool _isLoading = true;
+  double _fee = 300;
+  String _planLabel = 'Dealer Pro';
 
   @override
   void initState() {
@@ -26,12 +31,29 @@ class _DealerSubscriptionScreenState extends State<DealerSubscriptionScreen> {
 
   Future<void> _loadSubscription() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final role = (prefs.getString('role') ?? 'dealer').toLowerCase();
       final profile = await ApiService.getProfile();
       final userId = profile['id']?.toString() ?? '';
-      final sub = await _dealerPaymentRequest(
-        action: 'get_status',
-        userId: userId,
-      );
+
+      Map<String, dynamic> sub;
+      if (role == 'agent') {
+        sub = await ApiService.checkAgentStatus();
+        _fee = double.tryParse('${sub['subscription_fee'] ?? 20}') ?? 20;
+        _planLabel = 'Agent Pro';
+      } else if (role == 'company') {
+        sub = await ApiService.checkCompanyStatus();
+        _fee = double.tryParse('${sub['subscription_fee'] ?? 300}') ?? 300;
+        _planLabel = 'Company Pro';
+      } else {
+        sub = await _dealerPaymentRequest(
+          action: 'get_status',
+          userId: userId,
+        );
+        _fee = double.tryParse('${sub['subscription_fee'] ?? 300}') ?? 300;
+        _planLabel = 'Dealer Pro';
+      }
+
       if (!mounted) return;
       setState(() {
         _subscription = sub;
@@ -76,46 +98,85 @@ class _DealerSubscriptionScreenState extends State<DealerSubscriptionScreen> {
 
     return {'status': 'error', 'message': 'Invalid server response'};
   }
+
   Future<void> _handleUpgrade() async {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const DealerPaymentWebviewScreen(
-          url: 'https://houseforrent.site/login',
-        ),
-      ),
-    ).then((_) {
-      // When they return from the webview, reload the subscription status
-      // just in case they paid successfully.
-      if (mounted) {
-        setState(() {
-          _isLoading = true;
+    final prefs = await SharedPreferences.getInstance();
+    final role = (prefs.getString('role') ?? 'dealer').toLowerCase();
+    final profile = await ApiService.getProfile();
+    final userId = profile['id']?.toString() ?? '';
+    final phone = Uri.encodeComponent(
+      (profile['phone'] ?? prefs.getString('phone') ?? '').toString(),
+    );
+    final email = Uri.encodeComponent(
+      (profile['email'] ?? prefs.getString('email') ?? '').toString(),
+    );
+    final name = Uri.encodeComponent(
+      (profile['name'] ?? prefs.getString('name') ?? 'Subscriber').toString(),
+    );
+
+    // Agent/company: same Lenco flow as tenant payment, different file & fee.
+    // Dealer: keep existing dealer payment endpoint.
+    final String url;
+    if (role == 'agent' || role == 'company') {
+      url =
+          '${ApiService.baseUrl}/agent_company/payment.php'
+          '?action=pay_page&user_id=$userId&phone=$phone&email=$email&name=$name';
+    } else {
+      url =
+          '$_dealerPaymentUrl'
+          '?action=pay_page&user_id=$userId&phone=$phone&email=$email&name=$name';
+    }
+
+    if (!mounted) return;
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (context) => DealerPaymentWebviewScreen(url: url),
+          ),
+        )
+        .then((_) {
+          if (mounted) {
+            setState(() {
+              _isLoading = true;
+            });
+            _loadSubscription();
+          }
         });
-        _loadSubscription();
-      }
-    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
+    if (_isLoading) {
+      return const SkeletonDealerSubscription();
+    }
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 48.0),
       child: Center(
         child: Column(
           children: [
-            const Text('Choose Your Plan', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF0F2041))),
+            Text(
+              'Choose Your Plan',
+              style: textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 8),
-            const Text('Unlock unlimited listings and premium features.', style: TextStyle(fontSize: 16, color: Colors.black54)),
+            Text(
+              'Unlock unlimited listings and premium features.',
+              style: textTheme.bodyLarge?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
             const SizedBox(height: 48),
-            
+
             Wrap(
               spacing: 32,
               runSpacing: 32,
               alignment: WrapAlignment.center,
-              children: [
-                _buildBasicPlanCard(),
-                _buildProPlanCard(),
-              ],
-            )
+              children: [_buildBasicPlanCard(), _buildProPlanCard()],
+            ),
           ],
         ),
       ),
@@ -123,30 +184,38 @@ class _DealerSubscriptionScreenState extends State<DealerSubscriptionScreen> {
   }
 
   Widget _buildBasicPlanCard() {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Container(
       width: 350,
       padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          )
-        ],
-        border: Border.all(color: Colors.grey.shade100),
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: Column(
         children: [
-          const Text('Basic Access', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Color(0xFF4A5568))),
+          Text(
+            'Basic Access',
+            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 24),
-          const Text('Free', style: TextStyle(fontSize: 56, fontWeight: FontWeight.bold, color: Color(0xFF1A202C))),
+          Text(
+            'Free',
+            style: textTheme.displaySmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 8),
-          const Text('Forever', style: TextStyle(fontSize: 16, color: Colors.black54)),
+          Text(
+            'Forever',
+            style: textTheme.bodyLarge?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
           const SizedBox(height: 40),
-          
+
           _buildFeatureRow('Browse Properties', true),
           const SizedBox(height: 16),
           _buildFeatureRow('Contact Dealers', true),
@@ -154,26 +223,34 @@ class _DealerSubscriptionScreenState extends State<DealerSubscriptionScreen> {
           _buildFeatureRow('List Properties', false),
           const SizedBox(height: 16),
           _buildFeatureRow('Analytics Dashboard', false),
-          
+
           const SizedBox(height: 40),
           SizedBox(
             width: double.infinity,
             height: 50,
             child: OutlinedButton(
-              onPressed: null, // Disabled as it's the current plan for un-upgraded users
+              onPressed:
+                  null, // Disabled as it's the current plan for un-upgraded users
               style: OutlinedButton.styleFrom(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                side: BorderSide(color: Colors.grey.shade300),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                side: BorderSide(color: colors.outlineVariant),
               ),
-              child: const Text('Current Plan', style: TextStyle(fontSize: 16, color: Colors.black45)),
+              child: Text(
+                'Current Plan',
+                style: TextStyle(fontSize: 16, color: colors.onSurfaceVariant),
+              ),
             ),
-          )
+          ),
         ],
       ),
     );
   }
 
   Widget _buildProPlanCard() {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -181,25 +258,38 @@ class _DealerSubscriptionScreenState extends State<DealerSubscriptionScreen> {
           width: 350,
           padding: const EdgeInsets.all(40),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 30,
-                offset: const Offset(0, 15),
-              )
-            ],
+            color: colors.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: const Color(0xFFFFC107).withValues(alpha: 0.6),
+            ),
           ),
           child: Column(
             children: [
-              const Text('Dealer Pro', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Color(0xFFFFC107))),
+              Text(
+                _planLabel,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFFFFC107),
+                ),
+              ),
               const SizedBox(height: 24),
-              const Text('ZMW 20', style: TextStyle(fontSize: 56, fontWeight: FontWeight.bold, color: Color(0xFF1A202C))),
+              Text(
+                'ZMW ${_fee == _fee.roundToDouble() ? _fee.toInt() : _fee.toStringAsFixed(0)}',
+                style: textTheme.displaySmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 8),
-              const Text('Per Month', style: TextStyle(fontSize: 16, color: Colors.black54)),
+              Text(
+                'Per Month',
+                style: textTheme.bodyLarge?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
               const SizedBox(height: 40),
-              
+
               _buildFeatureRow('Unlimited Listings', true, isPro: true),
               const SizedBox(height: 16),
               _buildFeatureRow('Featured Properties', true, isPro: true),
@@ -207,7 +297,7 @@ class _DealerSubscriptionScreenState extends State<DealerSubscriptionScreen> {
               _buildFeatureRow('Analytics & Leads', true, isPro: true),
               const SizedBox(height: 16),
               _buildFeatureRow('Verified Badge', true, isPro: true),
-              
+
               const SizedBox(height: 40),
               SizedBox(
                 width: double.infinity,
@@ -217,15 +307,20 @@ class _DealerSubscriptionScreenState extends State<DealerSubscriptionScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFFC107),
                     foregroundColor: Colors.black87,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     elevation: 0,
                   ),
                   child: Text(
                     _isLoading ? 'Please wait...' : 'Upgrade Now',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -241,26 +336,42 @@ class _DealerSubscriptionScreenState extends State<DealerSubscriptionScreen> {
                 bottomLeft: Radius.circular(8),
               ),
             ),
-            child: const Text('RECOMMENDED', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87)),
+            child: const Text(
+              'RECOMMENDED',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
           ),
-        )
+        ),
       ],
     );
   }
 
   Widget _buildFeatureRow(String text, bool included, {bool isPro = false}) {
+    final colors = Theme.of(context).colorScheme;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(
           included ? Icons.check_circle : Icons.cancel,
-          color: included ? (isPro ? const Color(0xFFFFC107) : Colors.green) : Colors.grey.shade400,
+          color: included
+              ? (isPro ? const Color(0xFFFFC107) : Colors.green)
+              : Colors.grey.shade400,
           size: 20,
         ),
         const SizedBox(width: 12),
         SizedBox(
           width: 160,
-          child: Text(text, style: TextStyle(fontSize: 16, color: Colors.grey.shade800)),
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 16,
+              color: included ? colors.onSurface : colors.onSurfaceVariant,
+            ),
+          ),
         ),
       ],
     );

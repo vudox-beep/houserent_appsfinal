@@ -10,12 +10,13 @@ class DealerAddPropertyScreen extends StatefulWidget {
   const DealerAddPropertyScreen({super.key, this.propertyToEdit});
 
   @override
-  State<DealerAddPropertyScreen> createState() => _DealerAddPropertyScreenState();
+  State<DealerAddPropertyScreen> createState() =>
+      _DealerAddPropertyScreenState();
 }
 
 class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
   final _formKey = GlobalKey<FormState>();
-  
+
   // Form controllers
   final _titleController = TextEditingController();
   final _priceController = TextEditingController();
@@ -28,33 +29,39 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
   final _countryController = TextEditingController();
   final _addressController = TextEditingController();
   final _videoUrlController = TextEditingController();
-  
+
   // New controllers for specific categories
   final _capacityController = TextEditingController();
   final _peoplePerRoomController = TextEditingController();
   final _eventTypeController = TextEditingController();
-  
+
   bool _cateringAvailable = false;
   bool _equipmentAvailable = false;
 
   String _currency = 'ZMW';
   String _propertyType = 'Apartment';
   String _purpose = 'Rent';
-  
+
   final List<String> _propertyTypes = [
-    'House', 
-    'Apartment', 
-    'Boarding Houses', 
-    'Wedding Lodges', 
+    'House',
+    'Apartment',
+    'Boarding Houses',
+    'Wedding Lodges',
     'Studios',
     'Land for Sale',
     'Shop / Commercial',
     'Office Space',
-    'Zed Bine'
+    'Zed Bine',
   ];
 
-  final List<String> _purposes = ['Rent', 'Sale', 'Service', 'Auction', 'Lease'];
-  
+  final List<String> _purposes = [
+    'Rent',
+    'Sale',
+    'Service',
+    'Auction',
+    'Lease',
+  ];
+
   final List<String> _amenitiesOptions = [
     'WiFi',
     'Parking',
@@ -63,26 +70,74 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
     'Air Conditioning',
     'Security',
     'Balcony',
-    'Furnished'
+    'Furnished',
   ];
   final List<String> _selectedAmenities = [];
 
   final List<String> _africanCountries = [
-    'Algeria', 'Angola', 'Benin', 'Botswana', 'Burkina Faso', 'Burundi', 'Cabo Verde', 
-    'Cameroon', 'Central African Republic', 'Chad', 'Comoros', 'Congo (Congo-Brazzaville)', 
-    'Democratic Republic of the Congo', 'Djibouti', 'Egypt', 'Equatorial Guinea', 'Eritrea', 
-    'Eswatini', 'Ethiopia', 'Gabon', 'Gambia', 'Ghana', 'Guinea', 'Guinea-Bissau', 
-    'Ivory Coast', 'Kenya', 'Lesotho', 'Liberia', 'Libya', 'Madagascar', 'Malawi', 'Mali', 
-    'Mauritania', 'Mauritius', 'Morocco', 'Mozambique', 'Namibia', 'Niger', 'Nigeria', 
-    'Rwanda', 'Sao Tome and Principe', 'Senegal', 'Seychelles', 'Sierra Leone', 'Somalia', 
-    'South Africa', 'South Sudan', 'Sudan', 'Tanzania', 'Togo', 'Tunisia', 'Uganda', 
-    'Zambia', 'Zimbabwe'
+    'Algeria',
+    'Angola',
+    'Benin',
+    'Botswana',
+    'Burkina Faso',
+    'Burundi',
+    'Cabo Verde',
+    'Cameroon',
+    'Central African Republic',
+    'Chad',
+    'Comoros',
+    'Congo (Congo-Brazzaville)',
+    'Democratic Republic of the Congo',
+    'Djibouti',
+    'Egypt',
+    'Equatorial Guinea',
+    'Eritrea',
+    'Eswatini',
+    'Ethiopia',
+    'Gabon',
+    'Gambia',
+    'Ghana',
+    'Guinea',
+    'Guinea-Bissau',
+    'Ivory Coast',
+    'Kenya',
+    'Lesotho',
+    'Liberia',
+    'Libya',
+    'Madagascar',
+    'Malawi',
+    'Mali',
+    'Mauritania',
+    'Mauritius',
+    'Morocco',
+    'Mozambique',
+    'Namibia',
+    'Niger',
+    'Nigeria',
+    'Rwanda',
+    'Sao Tome and Principe',
+    'Senegal',
+    'Seychelles',
+    'Sierra Leone',
+    'Somalia',
+    'South Africa',
+    'South Sudan',
+    'Sudan',
+    'Tanzania',
+    'Togo',
+    'Tunisia',
+    'Uganda',
+    'Zambia',
+    'Zimbabwe',
   ];
   String _selectedCountry = 'Zambia';
-  
+
   // Google Maps
   GoogleMapController? _mapController;
-  LatLng _selectedLocation = const LatLng(-15.3875, 28.3228); // Default to Lusaka, Zambia
+  LatLng _selectedLocation = const LatLng(
+    -15.3875,
+    28.3228,
+  ); // Default to Lusaka, Zambia
   Set<Marker> _markers = {};
   bool get _isEditing => widget.propertyToEdit != null;
 
@@ -115,9 +170,14 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
       if (type.contains('wedding')) return 'Wedding Lodges';
       if (type.contains('studio')) return 'Studios';
       if (type.contains('land')) return 'Land for Sale';
-      if (type.contains('shop') || type.contains('commercial')) return 'Shop / Commercial';
+      if (type.contains('shop') || type.contains('commercial'))
+        return 'Shop / Commercial';
       if (type.contains('office')) return 'Office Space';
-      if (type == 'salon' || type == 'gadget' || type == 'other_service' || type == 'mechanic') return 'Zed Bine';
+      if (type == 'salon' ||
+          type == 'gadget' ||
+          type == 'other_service' ||
+          type == 'mechanic')
+        return 'Zed Bine';
       return 'House';
     }
 
@@ -142,30 +202,43 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
     _bedroomsController.text = (property['bedrooms'] ?? '').toString();
     _bathroomsController.text = (property['bathrooms'] ?? '').toString();
     _totalRoomsController.text = (property['rooms'] ?? '').toString();
-    _sizeController.text = (property['size_sqm'] ?? property['size'] ?? '').toString();
+    _sizeController.text = (property['size_sqm'] ?? property['size'] ?? '')
+        .toString();
     _cityController.text = (property['city'] ?? '').toString();
-    _addressController.text = (property['location'] ?? property['address'] ?? '').toString();
+    _addressController.text =
+        (property['location'] ?? property['address'] ?? '').toString();
     _videoUrlController.text = (property['video_url'] ?? '').toString();
     _capacityController.text = (property['capacity'] ?? '').toString();
-    _peoplePerRoomController.text = (property['people_per_room'] ?? '').toString();
+    _peoplePerRoomController.text = (property['people_per_room'] ?? '')
+        .toString();
     _eventTypeController.text = (property['event_type'] ?? '').toString();
-    
+
     // Reverse map for Zed Bine
-    final rawType = (property['property_type'] ?? property['type'] ?? '').toString().trim().toLowerCase();
+    final rawType = (property['property_type'] ?? property['type'] ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
     if (rawType == 'salon') _eventTypeController.text = 'Salon & Beauty';
     if (rawType == 'gadget') _eventTypeController.text = 'Gadgets';
     if (rawType == 'mechanic') _eventTypeController.text = 'Repairs';
-    if (rawType == 'other_service') _eventTypeController.text = 'Other Services';
+    if (rawType == 'other_service')
+      _eventTypeController.text = 'Other Services';
 
     _propertyType = mapType(property['property_type'] ?? property['type']);
-    _purpose = mapPurpose(property['listing_purpose'] ?? property['purpose'], _propertyType);
+    _purpose = mapPurpose(
+      property['listing_purpose'] ?? property['purpose'],
+      _propertyType,
+    );
     _currency = ((property['currency'] ?? 'ZMW').toString().trim().isEmpty)
         ? 'ZMW'
         : (property['currency'] ?? 'ZMW').toString().trim();
-    final incomingCountry = ((property['country'] ?? 'Zambia').toString().trim().isEmpty)
+    final incomingCountry =
+        ((property['country'] ?? 'Zambia').toString().trim().isEmpty)
         ? 'Zambia'
         : (property['country'] ?? 'Zambia').toString().trim();
-    _selectedCountry = _africanCountries.contains(incomingCountry) ? incomingCountry : 'Zambia';
+    _selectedCountry = _africanCountries.contains(incomingCountry)
+        ? incomingCountry
+        : 'Zambia';
 
     final amenitiesRaw = (property['amenities'] ?? '').toString();
     if (amenitiesRaw.isNotEmpty) {
@@ -179,8 +252,12 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
         );
     }
 
-    _cateringAvailable = (property['catering_available']?.toString() == '1') || property['catering_available'] == true;
-    _equipmentAvailable = (property['equipment_available']?.toString() == '1') || property['equipment_available'] == true;
+    _cateringAvailable =
+        (property['catering_available']?.toString() == '1') ||
+        property['catering_available'] == true;
+    _equipmentAvailable =
+        (property['equipment_available']?.toString() == '1') ||
+        property['equipment_available'] == true;
 
     final lat = double.tryParse((property['latitude'] ?? '').toString());
     final lng = double.tryParse((property['longitude'] ?? '').toString());
@@ -212,19 +289,22 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
     if (_formKey.currentState!.validate()) {
       // Map frontend types to backend expected values or just pass them as is.
       // Backend expects specific fields based on property_type:
-      
+
       final propertyData = {
         'title': _titleController.text,
         'price': _priceController.text,
         'currency': _currency,
-        'property_type': _propertyType, // e.g., 'Boarding Houses', 'Wedding Lodges', 'Studios'
+        'property_type':
+            _propertyType, // e.g., 'Boarding Houses', 'Wedding Lodges', 'Studios'
         'listing_purpose': _purpose,
         'description': _descriptionController.text,
         'location': _addressController.text, // API expects 'location'
         'city': _cityController.text,
         'country': _selectedCountry,
         'video_url': _videoUrlController.text,
-        'amenities': _selectedAmenities.join(','), // Convert list to comma-separated string for API
+        'amenities': _selectedAmenities.join(
+          ',',
+        ), // Convert list to comma-separated string for API
         'latitude': _selectedLocation.latitude.toString(),
         'longitude': _selectedLocation.longitude.toString(),
       };
@@ -239,7 +319,8 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
         propertyData['people_per_room'] = _peoplePerRoomController.text;
         propertyData['rooms'] = _totalRoomsController.text;
         propertyData['size_sqm'] = _sizeController.text;
-      } else if (_propertyType == 'Wedding Lodges' || _propertyType == 'Studios') {
+      } else if (_propertyType == 'Wedding Lodges' ||
+          _propertyType == 'Studios') {
         propertyData['capacity'] = _capacityController.text;
         propertyData['event_type'] = _eventTypeController.text;
         propertyData['catering_available'] = _cateringAvailable ? '1' : '0';
@@ -256,7 +337,8 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
         } else {
           propertyData['property_type'] = 'other_service';
         }
-        propertyData['listing_purpose'] = 'service'; // Always force purpose to service
+        propertyData['listing_purpose'] =
+            'service'; // Always force purpose to service
       } else {
         propertyData['rooms'] = _totalRoomsController.text;
         propertyData['size_sqm'] = _sizeController.text;
@@ -264,28 +346,48 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
 
       // Proceed to image upload step
       Navigator.push(
-        context, 
+        context,
         MaterialPageRoute(
           builder: (context) => DealerImageUploadScreen(
             propertyData: propertyData,
-            propertyId: _isEditing ? widget.propertyToEdit!['id']?.toString() : null,
+            propertyId: _isEditing
+                ? widget.propertyToEdit!['id']?.toString()
+                : null,
             isEditing: _isEditing,
-          )
-        )
+          ),
+        ),
       );
     }
   }
 
+  bool _containsPhoneNumber(String text) {
+    final matches = RegExp(r'\+?\d[\d\s\-\(\)]{7,}\d').allMatches(text);
+    for (final m in matches) {
+      final chunk = m.group(0) ?? '';
+      final digits = chunk.replaceAll(RegExp(r'[^0-9]'), '');
+      if (digits.length >= 9 && digits.length <= 15) return true;
+    }
+    return false;
+  }
+
   Widget _buildLabel(String text, {bool required = false}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: RichText(
         text: TextSpan(
           text: text,
-          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 14),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : Colors.black87,
+            fontSize: 14,
+          ),
           children: [
             if (required)
-              const TextSpan(text: ' *', style: TextStyle(color: Colors.red)),
+              const TextSpan(
+                text: ' *',
+                style: TextStyle(color: Colors.red),
+              ),
           ],
         ),
       ),
@@ -294,8 +396,15 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pageColor = isDark ? const Color(0xFF121212) : Colors.white;
+    final surfaceColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final primaryTextColor = isDark ? Colors.white : Colors.black87;
+    final secondaryTextColor = isDark ? Colors.white70 : Colors.black54;
+    final borderColor = isDark ? Colors.white12 : Colors.grey.shade300;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: pageColor,
       appBar: AppBar(
         title: Text(_isEditing ? 'Edit Property' : 'Add New Property'),
         backgroundColor: const Color(0xFF5A3D31), // Dark brown theme
@@ -322,22 +431,28 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
                       borderRadius: BorderRadius.circular(4),
                       borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
                   ),
-                  validator: (value) => value!.isEmpty ? 'Please enter a title' : null,
+                  validator: (value) =>
+                      value!.isEmpty ? 'Please enter a title' : null,
                 ),
                 const SizedBox(height: 24),
-                
+
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final isSmallScreen = constraints.maxWidth < 600;
-                    
+
                     return Wrap(
                       spacing: 24,
                       runSpacing: 24,
                       children: [
                         SizedBox(
-                          width: isSmallScreen ? double.infinity : (constraints.maxWidth - 48) / 3,
+                          width: isSmallScreen
+                              ? double.infinity
+                              : (constraints.maxWidth - 48) / 3,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -348,28 +463,55 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
                                 decoration: InputDecoration(
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(4),
-                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(4),
-                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(4),
-                                    borderSide: const BorderSide(color: Color(0xFFFFC107)),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFFFC107),
+                                    ),
                                   ),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 12,
+                                  ),
                                   prefixIcon: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Container(
-                                        padding: const EdgeInsets.only(left: 12.0, right: 4.0),
+                                        padding: const EdgeInsets.only(
+                                          left: 12.0,
+                                          right: 4.0,
+                                        ),
                                         child: DropdownButtonHideUnderline(
                                           child: DropdownButton<String>(
                                             value: _currency,
-                                            icon: const Icon(Icons.arrow_drop_down, size: 20),
+                                            icon: const Icon(
+                                              Icons.arrow_drop_down,
+                                              size: 20,
+                                            ),
                                             isDense: true,
-                                            items: ['ZMW', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 14)))).toList(),
+                                            items: ['ZMW', 'USD']
+                                                .map(
+                                                  (c) => DropdownMenuItem(
+                                                    value: c,
+                                                    child: Text(
+                                                      c,
+                                                      style: const TextStyle(
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                )
+                                                .toList(),
                                             onChanged: (val) {
                                               setState(() {
                                                 _currency = val!;
@@ -382,19 +524,27 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
                                         height: 24,
                                         width: 1,
                                         color: Colors.grey.shade300,
-                                        margin: const EdgeInsets.only(right: 8.0),
+                                        margin: const EdgeInsets.only(
+                                          right: 8.0,
+                                        ),
                                       ),
                                     ],
                                   ),
-                                  prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                                  prefixIconConstraints: const BoxConstraints(
+                                    minWidth: 0,
+                                    minHeight: 0,
+                                  ),
                                 ),
-                                validator: (value) => value!.isEmpty ? 'Required' : null,
+                                validator: (value) =>
+                                    value!.isEmpty ? 'Required' : null,
                               ),
                             ],
                           ),
                         ),
                         SizedBox(
-                          width: isSmallScreen ? double.infinity : (constraints.maxWidth - 48) / 3,
+                          width: isSmallScreen
+                              ? double.infinity
+                              : (constraints.maxWidth - 48) / 3,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -405,19 +555,39 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
                                 decoration: InputDecoration(
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(4),
-                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(4),
-                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
                                   ),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
                                 ),
-                                items: _propertyTypes.map((t) => DropdownMenuItem(value: t, child: Text(t, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)))).toList(),
+                                items: _propertyTypes
+                                    .map(
+                                      (t) => DropdownMenuItem(
+                                        value: t,
+                                        child: Text(
+                                          t,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
                                 onChanged: (val) {
                                   setState(() {
                                     _propertyType = val!;
-                                    if (_propertyType == 'Wedding Lodges' || _propertyType == 'Studios' || _propertyType == 'Zed Bine') {
+                                    if (_propertyType == 'Wedding Lodges' ||
+                                        _propertyType == 'Studios' ||
+                                        _propertyType == 'Zed Bine') {
                                       _purpose = 'Service';
                                     } else if (_purpose == 'Service') {
                                       _purpose = 'Rent';
@@ -429,7 +599,9 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
                           ),
                         ),
                         SizedBox(
-                          width: isSmallScreen ? double.infinity : (constraints.maxWidth - 48) / 3,
+                          width: isSmallScreen
+                              ? double.infinity
+                              : (constraints.maxWidth - 48) / 3,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -440,28 +612,49 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
                                 decoration: InputDecoration(
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(4),
-                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(4),
-                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
                                   ),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
                                 ),
-                                items: _purposes.map((p) => DropdownMenuItem(value: p, child: Text(p, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)))).toList(),
-                                onChanged: (_propertyType == 'Wedding Lodges' || _propertyType == 'Studios' || _propertyType == 'Zed Bine') 
-                                  ? null 
-                                  : (val) => setState(() => _purpose = val!),
+                                items: _purposes
+                                    .map(
+                                      (p) => DropdownMenuItem(
+                                        value: p,
+                                        child: Text(
+                                          p,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged:
+                                    (_propertyType == 'Wedding Lodges' ||
+                                        _propertyType == 'Studios' ||
+                                        _propertyType == 'Zed Bine')
+                                    ? null
+                                    : (val) => setState(() => _purpose = val!),
                               ),
                             ],
                           ),
                         ),
                       ],
                     );
-                  }
+                  },
                 ),
                 const SizedBox(height: 24),
-                
+
                 _buildLabel('Description'),
                 TextFormField(
                   controller: _descriptionController,
@@ -475,214 +668,53 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
                       borderRadius: BorderRadius.circular(4),
                       borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
                   ),
-                  validator: (value) => value!.isEmpty ? 'Please enter a description' : null,
+                  validator: (value) {
+                    final v = (value ?? '').trim();
+                    if (v.isEmpty) return 'Please enter a description';
+                    if (_containsPhoneNumber(v)) {
+                      return 'Please remove phone numbers from the description';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 24),
-                  
-                  // Dynamic Fields Based on Property Type
-                  if (_propertyType == 'Apartment' || _propertyType == 'House') ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildLabel('Bedrooms'),
-                              TextFormField(
-                                controller: _bedroomsController,
-                                keyboardType: TextInputType.number,
-                                decoration: InputDecoration(
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 24),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildLabel('Bathrooms'),
-                              TextFormField(
-                                controller: _bathroomsController,
-                                keyboardType: TextInputType.number,
-                                decoration: InputDecoration(
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 24),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildLabel('Total Rooms'),
-                              TextFormField(
-                                controller: _totalRoomsController,
-                                keyboardType: TextInputType.number,
-                                decoration: InputDecoration(
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 24),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildLabel('Size (sqm)'),
-                              TextFormField(
-                                controller: _sizeController,
-                                keyboardType: TextInputType.number,
-                                decoration: InputDecoration(
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                  ] else if (_propertyType == 'Boarding Houses') ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _capacityController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'Total Capacity', border: OutlineInputBorder()),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _peoplePerRoomController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'People per Room', border: OutlineInputBorder()),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                  ] else if (_propertyType == 'Wedding Lodges' || _propertyType == 'Studios') ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _capacityController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'Capacity (People)', border: OutlineInputBorder()),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _eventTypeController,
-                            decoration: const InputDecoration(labelText: 'Event Type (e.g., Weddings)', border: OutlineInputBorder()),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: CheckboxListTile(
-                            title: const Text('Catering Available', style: TextStyle(fontSize: 14)),
-                            value: _cateringAvailable,
-                            onChanged: (val) => setState(() => _cateringAvailable = val ?? false),
-                            contentPadding: EdgeInsets.zero,
-                            controlAffinity: ListTileControlAffinity.leading,
-                          ),
-                        ),
-                        Expanded(
-                          child: CheckboxListTile(
-                            title: const Text('Equipment Available', style: TextStyle(fontSize: 14)),
-                            value: _equipmentAvailable,
-                            onChanged: (val) => setState(() => _equipmentAvailable = val ?? false),
-                            contentPadding: EdgeInsets.zero,
-                            controlAffinity: ListTileControlAffinity.leading,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                  ] else if (_propertyType == 'Zed Bine') ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            decoration: const InputDecoration(labelText: 'Service Type', border: OutlineInputBorder()),
-                            value: ['Salon & Beauty', 'Gadgets', 'Repairs', 'Other Services'].contains(_eventTypeController.text) ? _eventTypeController.text : 'Other Services',
-                            items: ['Salon & Beauty', 'Gadgets', 'Repairs', 'Other Services']
-                                .map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 14)))).toList(),
-                            onChanged: (val) {
-                              setState(() {
-                                _eventTypeController.text = val ?? 'Other Services';
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                  ] else ...[
-                    // Default for Commercial, Land, etc.
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _totalRoomsController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'Total Rooms', border: OutlineInputBorder()),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _sizeController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'Size (sqft/sqm)', border: OutlineInputBorder()),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                  
+
+                // Dynamic Fields Based on Property Type
+                if (_propertyType == 'Apartment' ||
+                    _propertyType == 'House') ...[
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildLabel('City', required: true),
+                            _buildLabel('Bedrooms'),
                             TextFormField(
-                              controller: _cityController,
+                              controller: _bedroomsController,
+                              keyboardType: TextInputType.number,
                               decoration: InputDecoration(
-                                hintText: 'e.g. Lusaka',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
                               ),
-                              validator: (value) => value!.isEmpty ? 'Required' : null,
                             ),
                           ],
                         ),
@@ -692,17 +724,90 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildLabel('Country', required: true),
-                            DropdownButtonFormField<String>(
-                              isExpanded: true,
-                              value: _selectedCountry,
+                            _buildLabel('Bathrooms'),
+                            TextFormField(
+                              controller: _bathroomsController,
+                              keyboardType: TextInputType.number,
                               decoration: InputDecoration(
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
                               ),
-                              items: _africanCountries.map((c) => DropdownMenuItem(value: c, child: Text(c, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)))).toList(),
-                              onChanged: (val) => setState(() => _selectedCountry = val!),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildLabel('Total Rooms'),
+                            TextFormField(
+                              controller: _totalRoomsController,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildLabel('Size (sqm)'),
+                            TextFormField(
+                              controller: _sizeController,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -710,138 +815,452 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  
-                  _buildLabel('Address / Location', required: true),
-                  TextFormField(
-                    controller: _addressController,
-                    decoration: InputDecoration(
-                      hintText: 'Specific Area, Street',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    ),
-                    validator: (value) => value!.isEmpty ? 'Required' : null,
+                ] else if (_propertyType == 'Boarding Houses') ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _capacityController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Total Capacity',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _peoplePerRoomController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'People per Room',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                ] else if (_propertyType == 'Wedding Lodges' ||
+                    _propertyType == 'Studios') ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _capacityController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Capacity (People)',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _eventTypeController,
+                          decoration: const InputDecoration(
+                            labelText: 'Event Type (e.g., Weddings)',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
-                  const Text('Click on the map to pin the exact location.', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                  const SizedBox(height: 16),
-                  
-                  // Map Placeholder
-                  Container(
-                    height: 250,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) 
-                      ? GoogleMap(
-                          initialCameraPosition: CameraPosition(
-                            target: _selectedLocation,
-                            zoom: 14.0,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CheckboxListTile(
+                          title: const Text(
+                            'Catering Available',
+                            style: TextStyle(fontSize: 14),
                           ),
-                          markers: _markers,
-                          onMapCreated: (GoogleMapController controller) {
-                            _mapController = controller;
-                          },
-                          onTap: (LatLng location) {
+                          value: _cateringAvailable,
+                          onChanged: (val) =>
+                              setState(() => _cateringAvailable = val ?? false),
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                        ),
+                      ),
+                      Expanded(
+                        child: CheckboxListTile(
+                          title: const Text(
+                            'Equipment Available',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                          value: _equipmentAvailable,
+                          onChanged: (val) => setState(
+                            () => _equipmentAvailable = val ?? false,
+                          ),
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                ] else if (_propertyType == 'Zed Bine') ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          decoration: const InputDecoration(
+                            labelText: 'Service Type',
+                            border: OutlineInputBorder(),
+                          ),
+                          value:
+                              [
+                                'Salon & Beauty',
+                                'Gadgets',
+                                'Repairs',
+                                'Other Services',
+                              ].contains(_eventTypeController.text)
+                              ? _eventTypeController.text
+                              : 'Other Services',
+                          items:
+                              [
+                                    'Salon & Beauty',
+                                    'Gadgets',
+                                    'Repairs',
+                                    'Other Services',
+                                  ]
+                                  .map(
+                                    (c) => DropdownMenuItem(
+                                      value: c,
+                                      child: Text(
+                                        c,
+                                        style: const TextStyle(fontSize: 14),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                          onChanged: (val) {
                             setState(() {
-                              _selectedLocation = location;
-                              _markers.clear();
-                              _markers.add(
-                                Marker(
-                                  markerId: const MarkerId('selected_location'),
-                                  position: _selectedLocation,
-                                  draggable: true,
-                                  onDragEnd: (newPosition) {
-                                    setState(() {
-                                      _selectedLocation = newPosition;
-                                    });
-                                  },
-                                ),
-                              );
+                              _eventTypeController.text =
+                                  val ?? 'Other Services';
                             });
                           },
-                        )
-                      : Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.map_outlined, size: 48, color: Colors.grey.shade400),
-                              const SizedBox(height: 8),
-                              Text('Interactive Map unavailable on this device.', style: TextStyle(color: Colors.grey.shade600)),
-                              Text('Coordinates: ${_selectedLocation.latitude}, ${_selectedLocation.longitude}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                            ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                ] else ...[
+                  // Default for Commercial, Land, etc.
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _totalRoomsController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Total Rooms',
+                            border: OutlineInputBorder(),
                           ),
                         ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  _buildLabel('Amenities'),
-                  TextFormField(
-                    readOnly: true,
-                    decoration: InputDecoration(
-                      hintText: 'e.g. WiFi, Parking, Pool, Gym (Comma separated)',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8.0,
-                    runSpacing: 8.0,
-                    children: _amenitiesOptions.map((amenity) {
-                      final isSelected = _selectedAmenities.contains(amenity);
-                      return FilterChip(
-                        label: Text(amenity, style: TextStyle(color: isSelected ? Colors.black87 : Colors.grey.shade700, fontSize: 13)),
-                        selected: isSelected,
-                        onSelected: (bool selected) {
-                          setState(() {
-                            if (selected) {
-                              _selectedAmenities.add(amenity);
-                            } else {
-                              _selectedAmenities.remove(amenity);
-                            }
-                          });
-                        },
-                        selectedColor: const Color(0xFFFFC107).withOpacity(0.3),
-                        backgroundColor: Colors.grey.shade100,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          side: BorderSide(color: isSelected ? const Color(0xFFFFC107) : Colors.grey.shade300),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _sizeController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Size (sqft/sqm)',
+                            border: OutlineInputBorder(),
+                          ),
                         ),
-                        checkmarkColor: const Color(0xFF5A3D31),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  _buildLabel('Video Tour URL (Optional)'),
-                  TextFormField(
-                    controller: _videoUrlController,
-                    decoration: InputDecoration(
-                      hintText: 'https://youtube.com/...',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 24),
                 ],
-              ),
+
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildLabel('City', required: true),
+                          TextFormField(
+                            controller: _cityController,
+                            decoration: InputDecoration(
+                              hintText: 'e.g. Lusaka',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(4),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(4),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                            ),
+                            validator: (value) =>
+                                value!.isEmpty ? 'Required' : null,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildLabel('Country', required: true),
+                          DropdownButtonFormField<String>(
+                            isExpanded: true,
+                            value: _selectedCountry,
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(4),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(4),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                            ),
+                            items: _africanCountries
+                                .map(
+                                  (c) => DropdownMenuItem(
+                                    value: c,
+                                    child: Text(
+                                      c,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (val) =>
+                                setState(() => _selectedCountry = val!),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                _buildLabel('Address / Location', required: true),
+                TextFormField(
+                  controller: _addressController,
+                  decoration: InputDecoration(
+                    hintText: 'Specific Area, Street',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(4),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(4),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                  ),
+                  validator: (value) => value!.isEmpty ? 'Required' : null,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Click on the map to pin the exact location.',
+                  style: TextStyle(color: secondaryTextColor, fontSize: 12),
+                ),
+                const SizedBox(height: 16),
+
+                // Map Placeholder
+                Container(
+                  height: 250,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF1E1E1E)
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: (!kIsWeb && (Platform.isAndroid || Platform.isIOS))
+                        ? GoogleMap(
+                            initialCameraPosition: CameraPosition(
+                              target: _selectedLocation,
+                              zoom: 14.0,
+                            ),
+                            markers: _markers,
+                            onMapCreated: (GoogleMapController controller) {
+                              _mapController = controller;
+                            },
+                            onTap: (LatLng location) {
+                              setState(() {
+                                _selectedLocation = location;
+                                _markers.clear();
+                                _markers.add(
+                                  Marker(
+                                    markerId: const MarkerId(
+                                      'selected_location',
+                                    ),
+                                    position: _selectedLocation,
+                                    draggable: true,
+                                    onDragEnd: (newPosition) {
+                                      setState(() {
+                                        _selectedLocation = newPosition;
+                                      });
+                                    },
+                                  ),
+                                );
+                              });
+                            },
+                          )
+                        : Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.map_outlined,
+                                  size: 48,
+                                  color: isDark
+                                      ? Colors.white38
+                                      : Colors.grey.shade400,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Interactive Map unavailable on this device.',
+                                  style: TextStyle(color: secondaryTextColor),
+                                ),
+                                Text(
+                                  'Coordinates: ${_selectedLocation.latitude}, ${_selectedLocation.longitude}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryTextColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                _buildLabel('Amenities'),
+                TextFormField(
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    hintText: 'e.g. WiFi, Parking, Pool, Gym (Comma separated)',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(4),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(4),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8.0,
+                  runSpacing: 8.0,
+                  children: _amenitiesOptions.map((amenity) {
+                    final isSelected = _selectedAmenities.contains(amenity);
+                    return FilterChip(
+                      label: Text(
+                        amenity,
+                        style: TextStyle(
+                          color: isSelected
+                              ? Colors.black87
+                              : (isDark
+                                    ? Colors.white70
+                                    : Colors.grey.shade700),
+                          fontSize: 13,
+                        ),
+                      ),
+                      selected: isSelected,
+                      onSelected: (bool selected) {
+                        setState(() {
+                          if (selected) {
+                            _selectedAmenities.add(amenity);
+                          } else {
+                            _selectedAmenities.remove(amenity);
+                          }
+                        });
+                      },
+                      selectedColor: const Color(0xFFFFC107).withOpacity(0.3),
+                      backgroundColor: isDark
+                          ? const Color(0xFF2C2C2C)
+                          : Colors.grey.shade100,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: BorderSide(
+                          color: isSelected
+                              ? const Color(0xFFFFC107)
+                              : borderColor,
+                        ),
+                      ),
+                      checkmarkColor: const Color(0xFF5A3D31),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 24),
+
+                _buildLabel('Video Tour URL (Optional)'),
+                TextFormField(
+                  controller: _videoUrlController,
+                  decoration: InputDecoration(
+                    hintText: 'https://youtube.com/...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(4),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(4),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
             ),
           ),
+        ),
       ),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Colors.grey.shade200)),
+          color: surfaceColor,
+          border: Border(
+            top: BorderSide(
+              color: isDark ? Colors.white12 : Colors.grey.shade200,
+            ),
+          ),
         ),
         child: SafeArea(
           child: Row(
@@ -850,10 +1269,15 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
               OutlinedButton(
                 onPressed: () => Navigator.pop(context),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.black87,
-                  side: BorderSide(color: Colors.grey.shade300),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  foregroundColor: primaryTextColor,
+                  side: BorderSide(color: borderColor),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                 ),
                 child: const Text('Cancel'),
               ),
@@ -861,10 +1285,17 @@ class _DealerAddPropertyScreenState extends State<DealerAddPropertyScreen> {
               ElevatedButton(
                 onPressed: _saveAndContinue,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFC107), // Yellow theme from the image
+                  backgroundColor: const Color(
+                    0xFFFFC107,
+                  ), // Yellow theme from the image
                   foregroundColor: Colors.black87,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                   elevation: 0,
                 ),
                 child: Text(

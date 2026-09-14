@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../utils/app_error.dart';
+import '../../widgets/skeleton_loader.dart';
 
 class DealerProfileScreen extends StatefulWidget {
   const DealerProfileScreen({super.key});
@@ -14,7 +15,7 @@ class _DealerProfileScreenState extends State<DealerProfileScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  
+
   bool _isLoading = true;
   bool _isSaving = false;
   String? _errorMessage;
@@ -39,7 +40,10 @@ class _DealerProfileScreenState extends State<DealerProfileScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = AppError.userMessage(e, fallback: 'Unable to load profile.');
+          _errorMessage = AppError.userMessage(
+            e,
+            fallback: 'Unable to load profile.',
+          );
           _isLoading = false;
         });
       }
@@ -54,17 +58,25 @@ class _DealerProfileScreenState extends State<DealerProfileScreen> {
     });
 
     try {
-      await ApiService.updateProfile(_nameController.text, _phoneController.text);
+      await ApiService.updateProfile(
+        _nameController.text,
+        _phoneController.text,
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully!'), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text('Profile updated successfully!'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppError.userMessage(e, fallback: 'Failed to update profile.')),
+            content: Text(
+              AppError.userMessage(e, fallback: 'Failed to update profile.'),
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -85,15 +97,18 @@ class _DealerProfileScreenState extends State<DealerProfileScreen> {
     _phoneController.dispose();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: Color(0xFFFFC107)));
+      return const SkeletonProfile();
     }
 
     if (_errorMessage != null) {
-      return Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)));
+      return Center(
+        child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
+      );
     }
 
     return Padding(
@@ -104,37 +119,58 @@ class _DealerProfileScreenState extends State<DealerProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Profile Settings', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              Text(
+                'Profile Settings',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 24),
               Container(
                 width: 600,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)],
+                  color: colors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: colors.outlineVariant),
                 ),
                 child: Column(
                   children: [
-                    const CircleAvatar(radius: 50, child: Icon(Icons.person, size: 50)),
+                    const CircleAvatar(
+                      radius: 50,
+                      child: Icon(Icons.person, size: 50),
+                    ),
                     const SizedBox(height: 24),
                     TextFormField(
                       controller: _nameController,
-                      decoration: const InputDecoration(labelText: 'Full Name', border: OutlineInputBorder()),
-                      validator: (value) => value == null || value.isEmpty ? 'Please enter your name' : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Full Name',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Please enter your name'
+                          : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _emailController,
-                      decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        border: OutlineInputBorder(),
+                      ),
                       readOnly: true,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _phoneController,
-                      decoration: const InputDecoration(labelText: 'Phone Number', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                        labelText: 'Phone Number',
+                        border: OutlineInputBorder(),
+                      ),
                       keyboardType: TextInputType.phone,
-                      validator: (value) => value == null || value.isEmpty ? 'Please enter your phone number' : null,
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Please enter your phone number'
+                          : null,
                     ),
                     const SizedBox(height: 24),
                     SizedBox(
@@ -146,11 +182,20 @@ class _DealerProfileScreenState extends State<DealerProfileScreen> {
                           backgroundColor: const Color(0xFFFFC107),
                           foregroundColor: Colors.black87,
                         ),
-                        child: _isSaving 
-                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold)),
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Save Changes',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
                       ),
-                    )
+                    ),
                   ],
                 ),
               ),

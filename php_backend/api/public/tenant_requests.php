@@ -20,6 +20,29 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization');
 require_once '../db.php';
 require_once '../auth.php';
 
+if (!function_exists('houserentSendHouseHuntPush')) {
+    function houserentSendHouseHuntPush(
+        PDO $conn,
+        array $ensureUserIds,
+        string $title,
+        string $body,
+        array $data = []
+    ): array {
+        if (function_exists('sendFirebaseNotificationEnsuringUsers')) {
+            return sendFirebaseNotificationEnsuringUsers(
+                $conn,
+                'all',
+                $ensureUserIds,
+                $title,
+                $body,
+                $data
+            );
+        }
+
+        return sendFirebaseNotificationToRole($conn, 'all', $title, $body, $data);
+    }
+}
+
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_POST['action'] ?? ($_GET['action'] ?? '');
 
@@ -116,6 +139,23 @@ if ($action === 'get_requests') {
     }
 
     try {
+        // Use the same paid tenant access managed by tenant_contact_payment.php.
+        // That API remains the single source of truth for payment status.
+        $accessStmt = $conn->prepare("
+            SELECT id
+            FROM premium_contacts
+            WHERE user_id = ? AND status = 'active'
+            LIMIT 1
+        ");
+        $accessStmt->execute([$user_id]);
+        if (!$accessStmt->fetch(PDO::FETCH_ASSOC)) {
+            json_response([
+                'status' => 'error',
+                'code' => 'TENANT_PAYMENT_REQUIRED',
+                'message' => 'A one-time K10 tenant access payment is required to post a house request.'
+            ]);
+        }
+
         $stmt = $conn->prepare("
             INSERT INTO tenant_requests (user_id, message, property_type, location, budget) 
             VALUES (?, ?, ?, ?, ?)
@@ -134,6 +174,43 @@ if ($action === 'get_requests') {
         $new_request = $fetchStmt->fetch(PDO::FETCH_ASSOC);
         $new_request['comments'] = [];
         $new_request['comment_count'] = 0;
+
+        // Real-time push for House Hunt posts — notify all registered app users.
+        $posterName = trim((string)($new_request['name'] ?? 'A tenant'));
+        $snippet = trim((string)$message);
+        if (strlen($snippet) > 110) {
+            $snippet = substr($snippet, 0, 107) . '...';
+        }
+        $pushTitle = 'New House Request';
+        $pushBody = $posterName . ': ' . $snippet;
+        if ($location !== '' && strtolower($location) !== 'any') {
+            $pushBody .= ' · ' . $location;
+        }
+
+        try {
+            $notifStmt = $conn->prepare("
+                INSERT INTO notifications (title, message, type, target_role, is_active, created_by)
+                VALUES (?, ?, 'info', 'all', 1, ?)
+            ");
+            $notifStmt->execute([$pushTitle, $pushBody, $user_id]);
+            $notificationId = (int)$conn->lastInsertId();
+
+            $firebasePushFile = dirname(__DIR__) . '/notifications/firebase_push.php';
+            if (is_file($firebasePushFile)) {
+                require_once $firebasePushFile;
+                houserentSendHouseHuntPush($conn, [$user_id], $pushTitle, $pushBody, [
+                    'id' => (string)$notificationId,
+                    'notification_id' => (string)$notificationId,
+                    'type' => 'house_hunt',
+                    'request_id' => (string)$new_id,
+                    'target_role' => 'all',
+                    'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
+                    'route' => '/tenant-requests',
+                ]);
+            }
+        } catch (Throwable $pushError) {
+            error_log('House hunt FCM push failed: ' . $pushError->getMessage());
+        }
 
         json_response(['status' => 'success', 'data' => $new_request]);
     } catch (Exception $e) {
@@ -190,6 +267,71 @@ if ($action === 'get_requests') {
         ");
         $fetchStmt->execute([$new_id]);
         $new_comment = $fetchStmt->fetch(PDO::FETCH_ASSOC);
+
+        // Notify all users when someone responds on House Hunt.
+        try {
+            $reqStmt = $conn->prepare("
+                SELECT tr.user_id AS poster_user_id, tr.message, tr.location, u.name AS poster_name
+                FROM tenant_requests tr
+                JOIN users u ON tr.user_id = u.id
+                WHERE tr.id = ?
+                LIMIT 1
+            ");
+            $reqStmt->execute([$request_id]);
+            $requestRow = $reqStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            $posterUserId = (int)($requestRow['poster_user_id'] ?? 0);
+
+            $responderName = trim((string)($new_comment['name'] ?? 'Someone'));
+            $responderRole = trim((string)($new_comment['role'] ?? ''));
+            if ($responderRole === 'dealer') {
+                $responderName .= ' (Dealer)';
+            }
+
+            $snippet = trim((string)$comment);
+            if (strlen($snippet) > 100) {
+                $snippet = substr($snippet, 0, 97) . '...';
+            }
+
+            $requestSnippet = trim((string)($requestRow['message'] ?? ''));
+            if (strlen($requestSnippet) > 60) {
+                $requestSnippet = substr($requestSnippet, 0, 57) . '...';
+            }
+
+            $pushTitle = 'New Reply on House Request';
+            $pushBody = $responderName . ': ' . $snippet;
+            if ($requestSnippet !== '') {
+                $pushBody .= ' · re: ' . $requestSnippet;
+            }
+
+            $notifStmt = $conn->prepare("
+                INSERT INTO notifications (title, message, type, target_role, is_active, created_by)
+                VALUES (?, ?, 'info', 'all', 1, ?)
+            ");
+            $notifStmt->execute([$pushTitle, $pushBody, $user['id']]);
+            $notificationId = (int)$conn->lastInsertId();
+
+            $firebasePushFile = dirname(__DIR__) . '/notifications/firebase_push.php';
+            if (is_file($firebasePushFile)) {
+                require_once $firebasePushFile;
+                $ensureUserIds = array_values(array_unique(array_filter(
+                    [$posterUserId, (int)$user['id']],
+                    static fn(int $id): bool => $id > 0
+                )));
+                houserentSendHouseHuntPush($conn, $ensureUserIds, $pushTitle, $pushBody, [
+                    'id' => (string)$notificationId,
+                    'notification_id' => (string)$notificationId,
+                    'type' => 'house_hunt_reply',
+                    'request_id' => (string)$request_id,
+                    'comment_id' => (string)$new_id,
+                    'poster_user_id' => (string)$posterUserId,
+                    'target_role' => 'all',
+                    'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
+                    'route' => '/tenant-requests',
+                ]);
+            }
+        } catch (Throwable $pushError) {
+            error_log('House hunt reply FCM push failed: ' . $pushError->getMessage());
+        }
 
         json_response(['status' => 'success', 'data' => $new_comment]);
     } catch (Exception $e) {

@@ -6,11 +6,14 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 require_once '../config/config.php';
 require_once '../config/db.php';
+require_once '../auth.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
+
+$authUser = authorize(['dealer', 'admin']);
 
 $referralModelPath = __DIR__ . '/../models/Referral.php';
 if (!file_exists($referralModelPath)) {
@@ -27,31 +30,7 @@ if (empty($data)) $data = $_POST;
 if (empty($data)) $data = $_GET;
 
 $action = strtolower(trim((string)($data['action'] ?? 'dashboard')));
-$user_id = $data['user_id'] ?? $_POST['user_id'] ?? $_GET['user_id'] ?? '';
-
-if (empty($user_id)) {
-    $headers = function_exists('getallheaders') ? getallheaders() : [];
-    $authorization = $headers['Authorization'] ?? $headers['authorization'] ?? ($_SERVER['HTTP_AUTHORIZATION'] ?? '');
-
-    if (!empty($authorization) && stripos($authorization, 'Bearer ') === 0) {
-        $token = trim(substr($authorization, 7));
-        $tokenParts = explode('.', $token);
-        if (count($tokenParts) === 3) {
-            $payload = json_decode(base64_decode($tokenParts[1]), true);
-            if (!empty($payload['id'])) {
-                $user_id = $payload['id'];
-            }
-        }
-    }
-}
-
-if (empty($user_id)) {
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'User ID is required'
-    ]);
-    exit;
-}
+$user_id = (int)$authUser['id'];
 
 try {
     $db = new Database();

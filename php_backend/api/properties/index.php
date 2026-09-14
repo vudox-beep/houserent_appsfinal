@@ -2,16 +2,72 @@
 require_once '../cors.php';
 require_once '../db.php';
 require_once '../auth.php';
+require_once __DIR__ . '/../includes/listings_cache.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
+/**
+ * Same URL rules as before — keep client image paths unchanged.
+ */
+function format_asset_url($raw) {
+    $url = trim((string)$raw);
+    $url = str_replace('`', '', $url);
+    $url = ltrim($url, '/');
+
+    if ($url !== '' && strpos($url, 'http') !== 0) {
+        $clean_path = preg_replace('/^(assets\/|php_backend\/api\/|uploads\/)/', '', $url);
+        $url = 'https://houseforrent.site/assets/' . $clean_path;
+    }
+
+    return $url;
+}
+
+function format_video_url_on_property(array &$property) {
+    if (!empty($property['video_url']) && strpos($property['video_url'], 'http') !== 0) {
+        $clean_vid_path = preg_replace(
+            '/^(assets\/|php_backend\/api\/|uploads\/)/',
+            '',
+            $property['video_url']
+        );
+        $property['video_url'] = 'https://houseforrent.site/assets/' . ltrim($clean_vid_path, '/');
+    }
+}
+
+/**
+ * Attach images to one property (same shape: images[], main_image).
+ */
+function attach_property_images(array &$property, array $images) {
+    $main_image = null;
+    $formatted_images = [];
+
+    foreach ($images as $img) {
+        $img_url = format_asset_url($img['url'] ?? '');
+        $img['url'] = $img_url;
+
+        if (($img['is_main'] ?? 0) == 1 && !$main_image) {
+            $main_image = $img_url;
+        }
+
+        $formatted_images[] = $img;
+    }
+
+    if (!$main_image && count($formatted_images) > 0) {
+        $main_image = $formatted_images[0]['url'];
+    }
+
+    if ($main_image) {
+        $main_image = trim(str_replace('`', '', $main_image));
+    }
+
+    $property['images'] = $formatted_images;
+    $property['main_image'] = $main_image;
+    format_video_url_on_property($property);
+}
+
 if ($method === 'GET') {
     // --- HIGH TRAFFIC PROTECTION ---
-    // Tell browsers and Cloudflare to cache the response for 60 seconds.
-    // This reduces database load massively without disturbing functionality.
-    // 10,000 users hitting the app at the same time will only trigger 1 database query per minute.
-    header("Cache-Control: public, max-age=60");
-    
+    send_listings_cache_headers(false);
+
     if (isset($_GET['id'])) {
         // Get single property
         try {
@@ -27,7 +83,7 @@ if ($method === 'GET') {
                   AND d.subscription_expiry >= NOW()
             ");
             $stmt->execute([$_GET['id']]);
-            
+
             if ($stmt->rowCount() == 0) {
                 http_response_code(404);
                 echo json_encode(["message" => "Property not found"]);
@@ -35,54 +91,13 @@ if ($method === 'GET') {
             }
 
             $property = $stmt->fetch();
-            
-            $imgStmt = $conn->prepare("SELECT id, image_path as url, is_main FROM property_images WHERE property_id = ?");
+
+            $imgStmt = $conn->prepare(
+                "SELECT id, image_path as url, is_main FROM property_images WHERE property_id = ?"
+            );
             $imgStmt->execute([$property['id']]);
             $images = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            $main_image = null;
-            $formatted_images = [];
-            
-            foreach ($images as $img) {
-                // Ensure full URL formatting
-                $img_url = trim($img['url']);
-                $img_url = str_replace('`', '', $img_url); // Clean any backticks
-                $img_url = ltrim($img_url, '/');
-                
-                if (strpos($img_url, 'http') !== 0) {
-                    // First, strip off any existing "assets/" or "php_backend/" from the raw db string to avoid double mapping
-                    $clean_path = preg_replace('/^(assets\/|php_backend\/api\/|uploads\/)/', '', $img_url);
-                    
-                    // Now FORCE the single source of truth URL directly to the outside assets folder
-                    $img_url = 'https://houseforrent.site/assets/' . $clean_path;
-                }
-                
-                $img['url'] = $img_url;
-                
-                if ($img['is_main'] == 1 && !$main_image) {
-                    $main_image = $img_url;
-                }
-                
-                $formatted_images[] = $img;
-            }
-            
-            if (!$main_image && count($formatted_images) > 0) {
-                $main_image = $formatted_images[0]['url'];
-            }
-            
-            // Clean the main image URL one last time just to be safe
-            if ($main_image) {
-                $main_image = trim(str_replace('`', '', $main_image));
-            }
-            
-            $property['images'] = $formatted_images;
-            $property['main_image'] = $main_image;
-            
-            // Preserve the video URL if it exists, format it to be a full URL if needed
-            if (!empty($property['video_url']) && strpos($property['video_url'], 'http') !== 0) {
-                $clean_vid_path = preg_replace('/^(assets\/|php_backend\/api\/|uploads\/)/', '', $property['video_url']);
-                $property['video_url'] = 'https://houseforrent.site/assets/' . ltrim($clean_vid_path, '/');
-            }
+            attach_property_images($property, $images);
 
             echo json_encode(["status" => "success", "data" => [$property]]);
         } catch (Exception $e) {
@@ -90,7 +105,18 @@ if ($method === 'GET') {
             echo json_encode(["message" => "Server error"]);
         }
     } else {
-        // Get all properties with filters
+        // Get all properties with filters — same query params / response as before.
+        $queryString = $_SERVER['QUERY_STRING'] ?? '';
+        $cacheTtlSeconds = 45;
+        $cacheFile = listings_cache_file($queryString);
+
+        if (is_file($cacheFile) && (time() - filemtime($cacheFile)) < $cacheTtlSeconds) {
+            send_listings_cache_headers(true);
+            header('Content-Type: application/json; charset=UTF-8');
+            readfile($cacheFile);
+            exit();
+        }
+
         try {
             $query = "
                 SELECT p.*, u.name as dealer_name, u.phone as dealer_phone, u.email as dealer_email
@@ -145,58 +171,34 @@ if ($method === 'GET') {
             $stmt->execute($params);
             $properties = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            foreach ($properties as &$prop) {
-                $imgStmt = $conn->prepare("SELECT id, image_path as url, is_main FROM property_images WHERE property_id = ?");
-                $imgStmt->execute([$prop['id']]);
-                $images = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
-                
-                $main_image = null;
-                $formatted_images = [];
-                
-                foreach ($images as $img) {
-                    // Ensure full URL formatting
-                    $img_url = trim($img['url']);
-                    $img_url = str_replace('`', '', $img_url); // Clean any backticks
-                    $img_url = ltrim($img_url, '/');
-                    
-                    if (strpos($img_url, 'http') !== 0) {
-                        // The frontend needs the EXACT path to the outside assets folder
-                        // First, strip off any existing "assets/" or "php_backend/" from the raw db string to avoid double mapping
-                        $clean_path = preg_replace('/^(assets\/|php_backend\/api\/|uploads\/)/', '', $img_url);
-                        
-                        // Now FORCE the single source of truth URL directly to the outside assets folder
-                        $img_url = 'https://houseforrent.site/assets/' . $clean_path;
-                    }
-                    
-                    $img['url'] = $img_url;
-                    
-                    if ($img['is_main'] == 1 && !$main_image) {
-                        $main_image = $img_url;
-                    }
-                    
-                    $formatted_images[] = $img;
-                }
-                
-                if (!$main_image && count($formatted_images) > 0) {
-                    $main_image = $formatted_images[0]['url'];
-                }
-                
-                // Clean the main image URL one last time just to be safe
-                if ($main_image) {
-                    $main_image = trim(str_replace('`', '', $main_image));
-                }
-                
-                $prop['images'] = $formatted_images;
-                $prop['main_image'] = $main_image;
-                
-                // Preserve the video URL if it exists; format it to be a full URL if needed
-                if (!empty($prop['video_url']) && strpos($prop['video_url'], 'http') !== 0) {
-                    $clean_vid_path = preg_replace('/^(assets\/|php_backend\/api\/|uploads\/)/', '', $prop['video_url']);
-                    $prop['video_url'] = 'https://houseforrent.site/assets/' . ltrim($clean_vid_path, '/');
+            // One images query for all rows (was N+1 before — main slowdown).
+            $imagesByProperty = [];
+            if (!empty($properties)) {
+                $ids = array_column($properties, 'id');
+                $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                $imgStmt = $conn->prepare(
+                    "SELECT id, property_id, image_path as url, is_main
+                     FROM property_images
+                     WHERE property_id IN ($placeholders)"
+                );
+                $imgStmt->execute(array_values($ids));
+                foreach ($imgStmt->fetchAll(PDO::FETCH_ASSOC) as $img) {
+                    $pid = $img['property_id'];
+                    unset($img['property_id']);
+                    $imagesByProperty[$pid][] = $img;
                 }
             }
 
-            echo json_encode(["status" => "success", "data" => $properties]);
+            foreach ($properties as &$prop) {
+                $images = $imagesByProperty[$prop['id']] ?? [];
+                attach_property_images($prop, $images);
+            }
+            unset($prop);
+
+            $payload = json_encode(["status" => "success", "data" => $properties]);
+            @file_put_contents($cacheFile, $payload);
+            send_listings_cache_headers(false);
+            echo $payload;
         } catch (Exception $e) {
             http_response_code(500);
             echo json_encode(["message" => "Server error"]);
@@ -204,7 +206,7 @@ if ($method === 'GET') {
     }
 } elseif ($method === 'POST') {
     $user = authorize(['dealer', 'admin']);
-    
+
     // Check if it's multipart/form-data for file uploads
     $title = $_POST['title'] ?? '';
     $description = $_POST['description'] ?? '';

@@ -147,6 +147,11 @@ class _PublicNotificationsScreenState extends State<PublicNotificationsScreen> {
     }
     if (index == 1) {
       if (!_isLoggedIn) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please login to view saved properties'),
+          ),
+        );
         context.go('/login');
         return;
       }
@@ -173,23 +178,20 @@ class _PublicNotificationsScreenState extends State<PublicNotificationsScreen> {
 
   BottomNavigationBar _buildBottomBar() {
     return BottomNavigationBar(
-      currentIndex: 2,
-      selectedItemColor: const Color(0xFFFFC107),
-      unselectedItemColor: Colors.grey,
+      currentIndex: 3,
       type: BottomNavigationBarType.fixed,
-      backgroundColor: Colors.white,
       elevation: 16,
       onTap: _onBottomTapped,
       items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home_outlined),
-          activeIcon: Icon(Icons.home),
-          label: 'Home',
-        ),
+        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
         BottomNavigationBarItem(
           icon: Icon(Icons.favorite_border),
           activeIcon: Icon(Icons.favorite),
           label: 'Saved',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.search),
+          label: 'House Request',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.notifications_none),
@@ -210,9 +212,7 @@ class _PublicNotificationsScreenState extends State<PublicNotificationsScreen> {
     final unreadCount = _notifications.where((n) => n['is_read'] == 0).length;
 
     if (_isCheckingAuth) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (!_isLoggedIn) {
@@ -270,10 +270,11 @@ class _PublicNotificationsScreenState extends State<PublicNotificationsScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFFFFC107),
         title: Text(
-          unreadCount > 0
-              ? 'Notifications ($unreadCount)'
-              : 'Notifications',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          unreadCount > 0 ? 'Notifications ($unreadCount)' : 'Notifications',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
           IconButton(
@@ -285,7 +286,10 @@ class _PublicNotificationsScreenState extends State<PublicNotificationsScreen> {
             onPressed: _notifications.isEmpty ? null : _clearMessages,
             child: const Text(
               'Clear',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -295,144 +299,147 @@ class _PublicNotificationsScreenState extends State<PublicNotificationsScreen> {
               child: CircularProgressIndicator(color: Color(0xFFFFC107)),
             )
           : _error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Could not load notifications',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black54,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        ElevatedButton.icon(
-                          onPressed: _loadNotifications,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Retry'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFFC107),
-                            foregroundColor: Colors.black87,
-                          ),
-                        ),
-                      ],
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Could not load notifications',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black54,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: _loadNotifications,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFFC107),
+                        foregroundColor: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : _notifications.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.notifications_none,
+                    size: 80,
+                    color: Colors.grey.shade300,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No notifications yet',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade500,
                     ),
                   ),
-                )
-              : _notifications.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _loadNotifications,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: _notifications.length,
+                itemBuilder: (context, index) {
+                  final notif = _notifications[index];
+                  final isRead = notif['is_read'] == 1;
+                  final type = (notif['type'] ?? 'info').toString();
+                  final color = _typeColor(type);
+                  final icon = _typeIcon(type);
+                  final title = (notif['title'] ?? 'Notification').toString();
+                  final message = (notif['message'] ?? '').toString();
+                  final date = _formatDate(
+                    (notif['created_at'] ?? '').toString(),
+                  );
+
+                  return GestureDetector(
+                    onTap: () => _markRead(notif),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isRead
+                              ? Colors.grey.shade200
+                              : color.withOpacity(0.35),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.notifications_none,
-                              size: 80, color: Colors.grey.shade300),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No notifications yet',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade500,
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: color.withOpacity(0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(icon, color: color),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  style: TextStyle(
+                                    fontWeight: isRead
+                                        ? FontWeight.w600
+                                        : FontWeight.w700,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  message,
+                                  style: const TextStyle(
+                                    color: Colors.black87,
+                                    height: 1.35,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  date,
+                                  style: const TextStyle(
+                                    color: Colors.black54,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _loadNotifications,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _notifications.length,
-                        itemBuilder: (context, index) {
-                          final notif = _notifications[index];
-                          final isRead = notif['is_read'] == 1;
-                          final type = (notif['type'] ?? 'info').toString();
-                          final color = _typeColor(type);
-                          final icon = _typeIcon(type);
-                          final title = (notif['title'] ?? 'Notification').toString();
-                          final message = (notif['message'] ?? '').toString();
-                          final date = _formatDate(
-                            (notif['created_at'] ?? '').toString(),
-                          );
-
-                          return GestureDetector(
-                            onTap: () => _markRead(notif),
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                  color: isRead
-                                      ? Colors.grey.shade200
-                                      : color.withOpacity(0.35),
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.04),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: color.withOpacity(0.12),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(icon, color: color),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          title,
-                                          style: TextStyle(
-                                            fontWeight: isRead
-                                                ? FontWeight.w600
-                                                : FontWeight.w700,
-                                            fontSize: 15,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          message,
-                                          style: const TextStyle(
-                                            color: Colors.black87,
-                                            height: 1.35,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          date,
-                                          style: const TextStyle(
-                                            color: Colors.black54,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
                     ),
+                  );
+                },
+              ),
+            ),
       bottomNavigationBar: _buildBottomBar(),
     );
   }

@@ -16,7 +16,37 @@ class RateLimiter {
     }
 
     public function check($identifier) {
-        $file = $this->storageDir . '/' . md5($identifier) . '.json';
+        if ($this->isBlocked($identifier)) {
+            return false; // Rate limit exceeded
+        }
+        $this->record($identifier);
+        return true;
+    }
+
+    // True when the identifier already used up its attempts. Does NOT record.
+    public function isBlocked($identifier) {
+        return count($this->validTimestamps($identifier)) >= $this->limit;
+    }
+
+    // Records one attempt (call this only for FAILED logins so successful
+    // sign-ins never lock people out).
+    public function record($identifier) {
+        $valid = $this->validTimestamps($identifier);
+        $valid[] = time();
+        @file_put_contents($this->fileFor($identifier), json_encode($valid));
+    }
+
+    // Wipes the counter, e.g. after a successful login.
+    public function clear($identifier) {
+        @unlink($this->fileFor($identifier));
+    }
+
+    private function fileFor($identifier) {
+        return $this->storageDir . '/' . md5($identifier) . '.json';
+    }
+
+    private function validTimestamps($identifier) {
+        $file = $this->fileFor($identifier);
         $now = time();
         $timestamps = [];
 
@@ -30,23 +60,14 @@ class RateLimiter {
             }
         }
 
-        // Sliding window: filter out timestamps older than the timeframe
-        $validTimestamps = [];
+        // Sliding window: keep only timestamps inside the timeframe
+        $valid = [];
         foreach ($timestamps as $ts) {
             if ($now - $ts < $this->timeframe) {
-                $validTimestamps[] = $ts;
+                $valid[] = $ts;
             }
         }
-
-        if (count($validTimestamps) >= $this->limit) {
-            return false; // Rate limit exceeded
-        }
-
-        // Add current request timestamp
-        $validTimestamps[] = $now;
-        @file_put_contents($file, json_encode($validTimestamps));
-        
-        return true;
+        return $valid;
     }
 }
 ?>

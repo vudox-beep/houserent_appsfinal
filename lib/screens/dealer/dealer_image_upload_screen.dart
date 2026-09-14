@@ -17,7 +17,8 @@ class DealerImageUploadScreen extends StatefulWidget {
   });
 
   @override
-  State<DealerImageUploadScreen> createState() => _DealerImageUploadScreenState();
+  State<DealerImageUploadScreen> createState() =>
+      _DealerImageUploadScreenState();
 }
 
 class _DealerImageUploadScreenState extends State<DealerImageUploadScreen> {
@@ -28,6 +29,7 @@ class _DealerImageUploadScreenState extends State<DealerImageUploadScreen> {
   bool _isLoadingExisting = false;
   bool _isLoadingPlan = false;
   bool _isProUser = false;
+  String _uploadStatusText = 'Uploading property and media...';
   final ImagePicker _picker = ImagePicker();
   static const int _freeMaxImages = 9;
 
@@ -62,15 +64,28 @@ class _DealerImageUploadScreenState extends State<DealerImageUploadScreen> {
     }
   }
 
-  bool _resolveIsPro(Map<String, dynamic>? subscription, Map<String, dynamic>? profile) {
+  bool _resolveIsPro(
+    Map<String, dynamic>? subscription,
+    Map<String, dynamic>? profile,
+  ) {
     String lower(dynamic v) => (v ?? '').toString().trim().toLowerCase();
     final subStatus = lower(subscription?['subscription_status']);
     final planName = lower(subscription?['plan_name']);
     final paidType = lower(profile?['paid_type'] ?? subscription?['paid_type']);
-    final accountType = lower(profile?['account_type'] ?? subscription?['account_type']);
+    final accountType = lower(
+      profile?['account_type'] ?? subscription?['account_type'],
+    );
 
-    final isExplicitFree = planName.contains('free') || planName.contains('trial') || accountType.contains('free') || paidType.contains('free');
-    final isProToken = planName.contains('pro') || accountType.contains('pro') || paidType.contains('pro') || paidType.contains('paid');
+    final isExplicitFree =
+        planName.contains('free') ||
+        planName.contains('trial') ||
+        accountType.contains('free') ||
+        paidType.contains('free');
+    final isProToken =
+        planName.contains('pro') ||
+        accountType.contains('pro') ||
+        paidType.contains('pro') ||
+        paidType.contains('paid');
     final isActive = subStatus == 'active';
 
     if (isExplicitFree && !isProToken) return false;
@@ -79,7 +94,10 @@ class _DealerImageUploadScreenState extends State<DealerImageUploadScreen> {
 
   bool _isVideoFilePath(String path) {
     final p = path.toLowerCase();
-    return p.endsWith('.mp4') || p.endsWith('.mov') || p.endsWith('.m4v') || p.endsWith('.avi');
+    return p.endsWith('.mp4') ||
+        p.endsWith('.mov') ||
+        p.endsWith('.m4v') ||
+        p.endsWith('.avi');
   }
 
   int _existingImageCountAfterRemovals() {
@@ -110,7 +128,9 @@ class _DealerImageUploadScreenState extends State<DealerImageUploadScreen> {
           if (img is Map) {
             final map = Map<String, dynamic>.from(img);
             final imageId = (map['id'] ?? '').toString();
-            final url = (map['url'] ?? map['image_path'] ?? '').toString().trim();
+            final url = (map['url'] ?? map['image_path'] ?? '')
+                .toString()
+                .trim();
             if (imageId.isNotEmpty && url.isNotEmpty) {
               parsed.add({
                 'id': imageId,
@@ -119,11 +139,7 @@ class _DealerImageUploadScreenState extends State<DealerImageUploadScreen> {
               });
             }
           } else if (img is String && img.trim().isNotEmpty) {
-            parsed.add({
-              'id': '',
-              'url': img.trim(),
-              'is_main': false,
-            });
+            parsed.add({'id': '', 'url': img.trim(), 'is_main': false});
           }
         }
         if (mounted) {
@@ -151,7 +167,9 @@ class _DealerImageUploadScreenState extends State<DealerImageUploadScreen> {
       _removedImageIds.add(id);
     }
     setState(() {
-      _existingImages.removeWhere((e) => (e['id'] ?? '').toString() == id && id.isNotEmpty);
+      _existingImages.removeWhere(
+        (e) => (e['id'] ?? '').toString() == id && id.isNotEmpty,
+      );
       if (id.isEmpty) {
         _existingImages.remove(image);
       }
@@ -164,12 +182,17 @@ class _DealerImageUploadScreenState extends State<DealerImageUploadScreen> {
       final List<XFile> pickedImages = await _picker.pickMultiImage();
       if (pickedImages.isNotEmpty) {
         if (!_isProUser) {
-          final currentImages = _existingImageCountAfterRemovals() + _newSelectedImageCount();
+          final currentImages =
+              _existingImageCountAfterRemovals() + _newSelectedImageCount();
           final allowedRemaining = _freeMaxImages - currentImages;
           if (allowedRemaining <= 0) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Upgrade to Pro to upload 10 or more images. Free accounts can use up to 9 images.')),
+                const SnackBar(
+                  content: Text(
+                    'Upgrade to Pro to upload 10 or more images. Free accounts can use up to 9 images.',
+                  ),
+                ),
               );
             }
             return;
@@ -182,7 +205,9 @@ class _DealerImageUploadScreenState extends State<DealerImageUploadScreen> {
 
           if (pickedImages.length > capped.length && mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Upgrade to Pro to upload 10 or more images.')),
+              const SnackBar(
+                content: Text('Upgrade to Pro to upload 10 or more images.'),
+              ),
             );
           }
           return;
@@ -194,7 +219,11 @@ class _DealerImageUploadScreenState extends State<DealerImageUploadScreen> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppError.userMessage(e, fallback: 'Unable to pick files.'))),
+        SnackBar(
+          content: Text(
+            AppError.userMessage(e, fallback: 'Unable to pick files.'),
+          ),
+        ),
       );
     }
   }
@@ -202,7 +231,11 @@ class _DealerImageUploadScreenState extends State<DealerImageUploadScreen> {
   Future<void> _pickVideo() async {
     if (!_isProUser) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Video upload is available on Pro only. Please upgrade to Pro.')),
+        const SnackBar(
+          content: Text(
+            'Video upload is available on Pro only. Please upgrade to Pro.',
+          ),
+        ),
       );
       return;
     }
@@ -215,7 +248,11 @@ class _DealerImageUploadScreenState extends State<DealerImageUploadScreen> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppError.userMessage(e, fallback: 'Unable to pick video.'))),
+        SnackBar(
+          content: Text(
+            AppError.userMessage(e, fallback: 'Unable to pick video.'),
+          ),
+        ),
       );
     }
   }
@@ -236,6 +273,7 @@ class _DealerImageUploadScreenState extends State<DealerImageUploadScreen> {
 
     setState(() {
       _isUploading = true;
+      _uploadStatusText = 'Saving property details...';
     });
 
     try {
@@ -246,7 +284,8 @@ class _DealerImageUploadScreenState extends State<DealerImageUploadScreen> {
         }
 
         if (!_isProUser) {
-          final totalImagesAfter = _existingImageCountAfterRemovals() + _newSelectedImageCount();
+          final totalImagesAfter =
+              _existingImageCountAfterRemovals() + _newSelectedImageCount();
           if (totalImagesAfter > _freeMaxImages) {
             throw Exception('Upgrade to Pro to upload 10 or more images.');
           }
@@ -256,28 +295,49 @@ class _DealerImageUploadScreenState extends State<DealerImageUploadScreen> {
           }
         }
 
-        final updateResponse = await ApiService.updateProperty(propertyId, widget.propertyData);
+        final updateResponse = await ApiService.updateProperty(
+          propertyId,
+          widget.propertyData,
+        );
         if (updateResponse['status'] != 'success') {
-          throw Exception(updateResponse['message'] ?? 'Failed to update property');
+          throw Exception(
+            updateResponse['message'] ?? 'Failed to update property',
+          );
         }
 
         if (_removedImageIds.isNotEmpty) {
+          setState(() {
+            _uploadStatusText = 'Removing old photos...';
+          });
           for (final imageId in _removedImageIds) {
             final removeResp = await ApiService.deletePropertyImage(
               propertyId: propertyId,
               imageId: imageId,
             );
             if (removeResp['status'] != 'success') {
-              throw Exception(removeResp['message'] ?? 'Failed to remove image');
+              throw Exception(
+                removeResp['message'] ?? 'Failed to remove image',
+              );
             }
           }
         }
 
         if (_selectedFiles.isNotEmpty) {
           final filePaths = _selectedFiles.map((f) => f.path).toList();
-          final addResponse = await ApiService.uploadPropertyImages(propertyId, filePaths);
+          final addResponse = await ApiService.uploadPropertyImages(
+            propertyId,
+            filePaths,
+            onProgress: (done, total) {
+              if (!mounted) return;
+              setState(() {
+                _uploadStatusText = 'Uploading photos $done of $total...';
+              });
+            },
+          );
           if (addResponse['status'] != 'success') {
-            throw Exception(addResponse['message'] ?? 'Failed to add new images');
+            throw Exception(
+              addResponse['message'] ?? 'Failed to add new images',
+            );
           }
         }
 
@@ -301,19 +361,37 @@ class _DealerImageUploadScreenState extends State<DealerImageUploadScreen> {
         }
 
         // 1. Create the property
-        final createResponse = await ApiService.createProperty(widget.propertyData);
+        final createResponse = await ApiService.createProperty(
+          widget.propertyData,
+        );
         if (createResponse['status'] != 'success') {
-          throw Exception(createResponse['message'] ?? 'Failed to create property');
+          throw Exception(
+            createResponse['message'] ?? 'Failed to create property',
+          );
         }
 
         final propertyId = createResponse['property_id'].toString();
 
-        // 2. Upload images/videos
+        // 2. Upload images/videos in small chunks (more reliable under traffic)
+        setState(() {
+          _uploadStatusText = 'Uploading photos...';
+        });
         final filePaths = _selectedFiles.map((f) => f.path).toList();
-        final uploadResponse = await ApiService.uploadPropertyImages(propertyId, filePaths);
+        final uploadResponse = await ApiService.uploadPropertyImages(
+          propertyId,
+          filePaths,
+          onProgress: (done, total) {
+            if (!mounted) return;
+            setState(() {
+              _uploadStatusText = 'Uploading photos $done of $total...';
+            });
+          },
+        );
 
         if (uploadResponse['status'] != 'success') {
-          throw Exception(uploadResponse['message'] ?? 'Failed to upload images');
+          throw Exception(
+            uploadResponse['message'] ?? 'Failed to upload images',
+          );
         }
 
         if (mounted) {
@@ -326,9 +404,18 @@ class _DealerImageUploadScreenState extends State<DealerImageUploadScreen> {
       }
     } catch (e) {
       if (mounted) {
-        final raw = e.toString().replaceFirst('Exception: ', '').trim();
+        final raw = AppError.userMessage(e).trim();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(raw.isNotEmpty ? raw : AppError.userMessage(e, fallback: 'Upload failed. Please try again.'))),
+          SnackBar(
+            content: Text(
+              raw.isNotEmpty
+                  ? raw
+                  : AppError.userMessage(
+                      e,
+                      fallback: 'Upload failed. Please try again.',
+                    ),
+            ),
+          ),
         );
       }
     } finally {
@@ -342,156 +429,366 @@ class _DealerImageUploadScreenState extends State<DealerImageUploadScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pageColor = isDark ? const Color(0xFF121212) : Colors.white;
+    final surfaceColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final primaryTextColor = isDark ? Colors.white : Colors.black87;
+    final secondaryTextColor = isDark ? Colors.white70 : Colors.black54;
+    final borderColor = isDark ? Colors.white12 : Colors.grey.shade300;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: pageColor,
       appBar: AppBar(
         title: Text(widget.isEditing ? 'Update Media' : 'Upload Media'),
         backgroundColor: const Color(0xFF5A3D31),
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: _isUploading 
-        ? const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(color: Color(0xFFFFC107)),
-                SizedBox(height: 16),
-                Text('Uploading property and media...', style: TextStyle(fontSize: 16)),
-              ],
-            ),
-          )
-        : Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Add Photos & Video',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  widget.isEditing
-                      ? 'Select files only if you want to replace current media. The first selected image will become the cover.'
-                      : 'The first image will be used as the cover photo. You can select multiple images at once.',
-                  style: TextStyle(color: Colors.grey),
-                ),
-                const SizedBox(height: 24),
-                if (_isLoadingPlan)
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 12),
-                    child: Text('Checking plan...', style: TextStyle(color: Colors.black54)),
-                  )
-                else if (!_isProUser)
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 12),
-                    child: Text(
-                      'Free plan limits: up to 9 images, video is locked. Upgrade to Pro for 10+ images and video.',
-                      style: TextStyle(color: Colors.black54),
+      body: _isUploading
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(color: Color(0xFFFFC107)),
+                  const SizedBox(height: 16),
+                  Text(
+                    _uploadStatusText,
+                    style: TextStyle(fontSize: 16, color: primaryTextColor),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Please keep the app open until upload finishes.',
+                    style: TextStyle(fontSize: 13, color: secondaryTextColor),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            )
+          : Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Add Photos & Video',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: primaryTextColor,
                     ),
                   ),
-                
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _pickFiles,
-                        icon: const Icon(Icons.image),
-                        label: const Text('Add Images'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey.shade200,
-                          foregroundColor: Colors.black87,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          elevation: 0,
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.isEditing
+                        ? 'Add clear photos of the property. The first new photo becomes the cover if no cover exists.'
+                        : 'Upload clear photos of the property. The first image is the cover photo.',
+                    style: TextStyle(color: secondaryTextColor),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF8E1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFFFE082)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Upload requirements',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF5A3D31),
+                          ),
                         ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '• Property photos: rooms, outside, and key areas (JPG/PNG/WEBP).',
+                          style: TextStyle(
+                            color: Colors.brown.shade800,
+                            height: 1.35,
+                          ),
+                        ),
+                        Text(
+                          '• For landlord / verified agent verification (separate screen): NRC or a clear photo of yourself standing at the property.',
+                          style: TextStyle(
+                            color: Colors.brown.shade800,
+                            height: 1.35,
+                          ),
+                        ),
+                        Text(
+                          '• Max about 12MB per file. Uploads are sent in small batches so they stay reliable.',
+                          style: TextStyle(
+                            color: Colors.brown.shade800,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  if (_isLoadingPlan)
+                    Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        'Checking plan...',
+                        style: TextStyle(color: secondaryTextColor),
+                      ),
+                    )
+                  else if (!_isProUser)
+                    Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        'Free plan limits: up to 9 images, video is locked. Upgrade to Pro for 10+ images and video.',
+                        style: TextStyle(color: secondaryTextColor),
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _pickVideo,
-                        icon: const Icon(Icons.video_library),
-                        label: const Text('Add Video'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _isProUser ? Colors.grey.shade200 : Colors.grey.shade300,
-                          foregroundColor: Colors.black87,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          elevation: 0,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
 
-                if (widget.isEditing) ...[
-                  const Text('Current Images:', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  if (_isLoadingExisting)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12.0),
-                      child: CircularProgressIndicator(color: Color(0xFFFFC107)),
-                    )
-                  else if (_existingImages.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 12.0),
-                      child: Text('No existing images found for this listing.', style: TextStyle(color: Colors.black54)),
-                    )
-                  else
-                    SizedBox(
-                      height: 130,
-                      child: GridView.builder(
-                        scrollDirection: Axis.horizontal,
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 1,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 1,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _pickFiles,
+                          icon: const Icon(Icons.image),
+                          label: const Text('Add Images'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isDark
+                                ? const Color(0xFF2C2C2C)
+                                : Colors.grey.shade200,
+                            foregroundColor: primaryTextColor,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            elevation: 0,
+                          ),
                         ),
-                        itemCount: _existingImages.length,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _pickVideo,
+                          icon: const Icon(Icons.video_library),
+                          label: const Text('Add Video'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isDark
+                                ? (_isProUser
+                                      ? const Color(0xFF2C2C2C)
+                                      : const Color(0xFF242424))
+                                : (_isProUser
+                                      ? Colors.grey.shade200
+                                      : Colors.grey.shade300),
+                            foregroundColor: isDark && !_isProUser
+                                ? Colors.white54
+                                : primaryTextColor,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  if (widget.isEditing) ...[
+                    Text(
+                      'Current Images:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: primaryTextColor,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (_isLoadingExisting)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12.0),
+                        child: CircularProgressIndicator(
+                          color: Color(0xFFFFC107),
+                        ),
+                      )
+                    else if (_existingImages.isEmpty)
+                      Padding(
+                        padding: EdgeInsets.only(bottom: 12.0),
+                        child: Text(
+                          'No existing images found for this listing.',
+                          style: TextStyle(color: secondaryTextColor),
+                        ),
+                      )
+                    else
+                      SizedBox(
+                        height: 130,
+                        child: GridView.builder(
+                          scrollDirection: Axis.horizontal,
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 1,
+                                mainAxisSpacing: 12,
+                                childAspectRatio: 1,
+                              ),
+                          itemCount: _existingImages.length,
+                          itemBuilder: (context, index) {
+                            final image = _existingImages[index];
+                            final imageUrl = (image['url'] ?? '').toString();
+                            return Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: borderColor),
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: Image.network(
+                                    imageUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, _, __) =>
+                                        const Center(
+                                          child: Icon(
+                                            Icons.image_not_supported,
+                                          ),
+                                        ),
+                                  ),
+                                ),
+                                if (image['is_main'] == true)
+                                  Positioned(
+                                    top: 4,
+                                    left: 4,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFFC107),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: const Text(
+                                        'Current Cover',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                Positioned(
+                                  top: 4,
+                                  right: 4,
+                                  child: GestureDetector(
+                                    onTap: () => _removeExistingImage(image),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(2),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.black54,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.close,
+                                        size: 16,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  if (_selectedFiles.isNotEmpty) ...[
+                    Text(
+                      'Selected Files:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: primaryTextColor,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: GridView.builder(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                            ),
+                        itemCount: _selectedFiles.length,
                         itemBuilder: (context, index) {
-                          final image = _existingImages[index];
-                          final imageUrl = (image['url'] ?? '').toString();
+                          final file = _selectedFiles[index];
+                          final isVideo =
+                              file.path.toLowerCase().endsWith('.mp4') ||
+                              file.path.toLowerCase().endsWith('.mov');
+
                           return Stack(
                             fit: StackFit.expand,
                             children: [
                               Container(
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.grey.shade300),
+                                  border: Border.all(color: borderColor),
                                 ),
                                 clipBehavior: Clip.antiAlias,
-                                child: Image.network(
-                                  imageUrl,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, _, __) => const Center(child: Icon(Icons.image_not_supported)),
-                                ),
+                                child: isVideo
+                                    ? Container(
+                                        color: isDark
+                                            ? Colors.white10
+                                            : Colors.black12,
+                                        child: Center(
+                                          child: Icon(
+                                            Icons.videocam,
+                                            size: 40,
+                                            color: isDark
+                                                ? Colors.white70
+                                                : Colors.black54,
+                                          ),
+                                        ),
+                                      )
+                                    : Image.file(
+                                        File(file.path),
+                                        fit: BoxFit.cover,
+                                      ),
                               ),
-                              if (image['is_main'] == true)
+                              if (index == 0 && !isVideo)
                                 Positioned(
                                   top: 4,
                                   left: 4,
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFFFC107),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
-                                    child: const Text('Current Cover', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                    child: const Text(
+                                      'Cover',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               Positioned(
                                 top: 4,
                                 right: 4,
                                 child: GestureDetector(
-                                  onTap: () => _removeExistingImage(image),
+                                  onTap: () => _removeFile(index),
                                   child: Container(
                                     padding: const EdgeInsets.all(2),
                                     decoration: const BoxDecoration(
                                       color: Colors.black54,
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(Icons.close, size: 16, color: Colors.white),
+                                    child: const Icon(
+                                      Icons.close,
+                                      size: 16,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -500,131 +797,94 @@ class _DealerImageUploadScreenState extends State<DealerImageUploadScreen> {
                         },
                       ),
                     ),
-                  const SizedBox(height: 16),
-                ],
-                
-                if (_selectedFiles.isNotEmpty) ...[
-                  const Text('Selected Files:', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                      ),
-                      itemCount: _selectedFiles.length,
-                      itemBuilder: (context, index) {
-                        final file = _selectedFiles[index];
-                        final isVideo = file.path.toLowerCase().endsWith('.mp4') || file.path.toLowerCase().endsWith('.mov');
-                        
-                        return Stack(
-                          fit: StackFit.expand,
+                  ] else
+                    Expanded(
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.grey.shade300),
-                              ),
-                              clipBehavior: Clip.antiAlias,
-                              child: isVideo 
-                                ? Container(
-                                    color: Colors.black12,
-                                    child: const Center(child: Icon(Icons.videocam, size: 40, color: Colors.black54)),
-                                  )
-                                : Image.file(
-                                    File(file.path),
-                                    fit: BoxFit.cover,
-                                  ),
+                            Icon(
+                              Icons.photo_library_outlined,
+                              size: 64,
+                              color: Colors.grey.shade300,
                             ),
-                            if (index == 0 && !isVideo)
-                              Positioned(
-                                top: 4,
-                                left: 4,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFFC107),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: const Text('Cover', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                                ),
-                              ),
-                            Positioned(
-                              top: 4,
-                              right: 4,
-                              child: GestureDetector(
-                                onTap: () => _removeFile(index),
-                                child: Container(
-                                  padding: const EdgeInsets.all(2),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.black54,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(Icons.close, size: 16, color: Colors.white),
-                                ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No media selected yet',
+                              style: TextStyle(
+                                color: isDark
+                                    ? Colors.white54
+                                    : Colors.grey.shade500,
                               ),
                             ),
                           ],
-                        );
-                      },
-                    ),
-                  ),
-                ] else
-                  Expanded(
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.photo_library_outlined, size: 64, color: Colors.grey.shade300),
-                          const SizedBox(height: 16),
-                          Text('No media selected yet', style: TextStyle(color: Colors.grey.shade500)),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-      bottomNavigationBar: _isUploading ? null : Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Colors.grey.shade200)),
-        ),
-        child: SafeArea(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              OutlinedButton(
-                onPressed: () => Navigator.pop(context),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.black87,
-                  side: BorderSide(color: Colors.grey.shade300),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                ),
-                child: const Text('Back'),
-              ),
-              const SizedBox(width: 16),
-              ElevatedButton(
-                onPressed: (!widget.isEditing && _selectedFiles.isEmpty) ? null : _submitProperty,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFC107), // Yellow theme for final action
-                  foregroundColor: Colors.black87,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                  elevation: 0,
-                ),
-                child: Text(
-                  widget.isEditing ? 'Update Property' : 'Publish Property',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+      bottomNavigationBar: _isUploading
+          ? null
+          : Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              decoration: BoxDecoration(
+                color: surfaceColor,
+                border: Border(
+                  top: BorderSide(
+                    color: isDark ? Colors.white12 : Colors.grey.shade200,
+                  ),
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
+              child: SafeArea(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: primaryTextColor,
+                        side: BorderSide(color: borderColor),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      child: const Text('Back'),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton(
+                      onPressed: (!widget.isEditing && _selectedFiles.isEmpty)
+                          ? null
+                          : _submitProperty,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(
+                          0xFFFFC107,
+                        ), // Yellow theme for final action
+                        foregroundColor: Colors.black87,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        widget.isEditing
+                            ? 'Update Property'
+                            : 'Publish Property',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 }

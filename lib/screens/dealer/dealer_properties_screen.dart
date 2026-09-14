@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/api_service.dart';
 import '../../utils/app_error.dart';
+import '../../widgets/skeleton_loader.dart';
 import 'dealer_add_property_screen.dart';
 
 class DealerPropertiesScreen extends StatefulWidget {
@@ -60,7 +61,11 @@ class _DealerPropertiesScreenState extends State<DealerPropertiesScreen> {
           _isLoading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppError.userMessage(e, fallback: 'Failed to load properties.'))),
+          SnackBar(
+            content: Text(
+              AppError.userMessage(e, fallback: 'Failed to load properties.'),
+            ),
+          ),
         );
       }
     }
@@ -68,66 +73,86 @@ class _DealerPropertiesScreenState extends State<DealerPropertiesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final pagePadding = MediaQuery.sizeOf(context).width < 600 ? 16.0 : 32.0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.all(32.0),
+          padding: EdgeInsets.all(pagePadding),
           child: Wrap(
             alignment: WrapAlignment.spaceBetween,
             crossAxisAlignment: WrapCrossAlignment.center,
             spacing: 16,
             runSpacing: 16,
             children: [
-              const Text('My Properties', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF0F2041))),
+              Text(
+                'My Properties',
+                style: textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               ElevatedButton.icon(
                 onPressed: () async {
                   final updated = await Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const DealerAddPropertyScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const DealerAddPropertyScreen(),
+                    ),
                   );
                   if (updated == true && mounted) {
                     _loadProperties();
                   }
                 },
                 icon: const Icon(Icons.add, size: 18),
-                label: const Text('Add New Property', style: TextStyle(fontWeight: FontWeight.bold)),
+                label: const Text(
+                  'Add New Property',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFC107), // Updated to match yellow theme
+                  backgroundColor: const Color(
+                    0xFFFFC107,
+                  ), // Updated to match yellow theme
                   foregroundColor: Colors.black87,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   elevation: 0,
                 ),
               ),
             ],
           ),
         ),
-        
+
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32.0),
+            padding: EdgeInsets.symmetric(horizontal: pagePadding),
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  )
-                ]
+                color: colors.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: colors.outlineVariant),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (_isLoading)
-                    const Expanded(child: Center(child: CircularProgressIndicator()))
+                    const Expanded(child: SkeletonDealerProperties())
                   else if (_properties.isEmpty)
-                    const Expanded(child: Center(child: Text('No properties found. Add one!', style: TextStyle(color: Colors.black54))))
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          'No properties found. Add one!',
+                          style: TextStyle(color: colors.onSurfaceVariant),
+                        ),
+                      ),
+                    )
                   else
                     Expanded(
                       child: LayoutBuilder(
@@ -135,240 +160,550 @@ class _DealerPropertiesScreenState extends State<DealerPropertiesScreen> {
                           return SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: ConstrainedBox(
-                              constraints: BoxConstraints(minWidth: constraints.maxWidth > 1108 ? constraints.maxWidth : 1108), // 300+120+120+100+120+120+180 + 48 padding
+                              constraints: BoxConstraints(
+                                minWidth: constraints.maxWidth > 1108
+                                    ? constraints.maxWidth
+                                    : 1108,
+                              ), // 300+120+120+100+120+120+180 + 48 padding
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 16,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                                      border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                                      color: colors.surfaceContainerHighest,
+                                      borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(12),
+                                      ),
+                                      border: Border(
+                                        bottom: BorderSide(
+                                          color: colors.outlineVariant,
+                                        ),
+                                      ),
                                     ),
                                     child: Row(
-                                      children: const [
-                                        SizedBox(width: 300, child: Text('PROPERTY', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87))),
-                                        SizedBox(width: 120, child: Text('TYPE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87))),
-                                        SizedBox(width: 120, child: Text('PRICE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87))),
-                                        SizedBox(width: 100, child: Text('VIEWS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87))),
-                                        SizedBox(width: 120, child: Text('STATUS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87))),
-                                        SizedBox(width: 120, child: Text('DATE ADDED', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87))),
-                                        SizedBox(width: 180, child: Text('ACTIONS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87))),
+                                      children: [
+                                        SizedBox(
+                                          width: 300,
+                                          child: Text(
+                                            'PROPERTY',
+                                            style: textTheme.labelLarge
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: 120,
+                                          child: Text(
+                                            'TYPE',
+                                            style: textTheme.labelLarge
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: 120,
+                                          child: Text(
+                                            'PRICE',
+                                            style: textTheme.labelLarge
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: 100,
+                                          child: Text(
+                                            'VIEWS',
+                                            style: textTheme.labelLarge
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: 120,
+                                          child: Text(
+                                            'STATUS',
+                                            style: textTheme.labelLarge
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: 120,
+                                          child: Text(
+                                            'DATE ADDED',
+                                            style: textTheme.labelLarge
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: 180,
+                                          child: Text(
+                                            'ACTIONS',
+                                            style: textTheme.labelLarge
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
-                                      Expanded(
-                                        child: SizedBox(
-                                          width: constraints.maxWidth > 1108 ? constraints.maxWidth : 1108,
-                                          child: ListView.separated(
-                                  itemCount: _properties.length,
-                                  separatorBuilder: (context, index) => const Divider(height: 1),
-                                  itemBuilder: (context, index) {
-                                    final property = _properties[index];
-                                    final title = property['title'] ?? 'Unknown Property';
-                                    final location = property['location'] ?? 'Unknown Location';
-                                    final type = property['property_type'] ?? property['type'] ?? 'House';
-                                    final currency = property['currency'] ?? 'ZMW';
-                                    final price = property['price'] ?? '0';
-                                    final views = property['views'] ?? 0;
-                                    final status = property['status'] ?? 'Available';
-                                    
-                                    // Mock date for UI display if not available in API
-                                    final dateStr = property['created_at'] ?? 'Mar 02, 2026';
-                                    final parts = dateStr.toString().split(' ');
-                                    final displayDate = parts.isNotEmpty ? parts[0] : 'Mar 02, 2026';
+                                  Expanded(
+                                    child: SizedBox(
+                                      width: constraints.maxWidth > 1108
+                                          ? constraints.maxWidth
+                                          : 1108,
+                                      child: ListView.separated(
+                                        itemCount: _properties.length,
+                                        separatorBuilder: (context, index) =>
+                                            const Divider(height: 1),
+                                        itemBuilder: (context, index) {
+                                          final property = _properties[index];
+                                          final title =
+                                              property['title'] ??
+                                              'Unknown Property';
+                                          final location =
+                                              property['location'] ??
+                                              'Unknown Location';
+                                          final type =
+                                              property['property_type'] ??
+                                              property['type'] ??
+                                              'House';
+                                          final currency =
+                                              property['currency'] ?? 'ZMW';
+                                          final price =
+                                              property['price'] ?? '0';
+                                          final views = property['views'] ?? 0;
+                                          final status =
+                                              property['status'] ?? 'Available';
 
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                                      child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.center,
-                                        children: [
-                                          SizedBox(
-                                            width: 300,
+                                          // Mock date for UI display if not available in API
+                                          final dateStr =
+                                              property['created_at'] ??
+                                              'Mar 02, 2026';
+                                          final parts = dateStr
+                                              .toString()
+                                              .split(' ');
+                                          final displayDate = parts.isNotEmpty
+                                              ? parts[0]
+                                              : 'Mar 02, 2026';
+
+                                          return Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 24,
+                                              vertical: 16,
+                                            ),
                                             child: Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.center,
                                               children: [
-                                                Container(
-                                                  width: 48,
-                                                  height: 48,
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.grey.shade100,
-                                                    borderRadius: BorderRadius.circular(8),
-                                                  ),
-                                                  child: (() {
-                                                    String? imageUrl;
-                                                    
-                                                    if (property['main_image'] != null && property['main_image'].toString().isNotEmpty) {
-                                                      String mainImg = property['main_image'].toString().trim();
-                                                      mainImg = mainImg.replaceAll('`', '');
-                                                      imageUrl = mainImg;
-                                                    } else if (property['images'] != null && property['images'].isNotEmpty) {
-                                                      var firstImage = property['images'][0];
-                                                      if (firstImage is Map && firstImage['url'] != null) {
-                                                        String urlStr = firstImage['url'].toString().trim();
-                                                        urlStr = urlStr.replaceAll('`', '');
-                                                        imageUrl = urlStr;
-                                                      } else if (firstImage is String) {
-                                                        String path = firstImage.trim();
-                                                        path = path.replaceAll('`', '');
-                                                        
-                                                        if (path.startsWith('http')) {
-                                                          imageUrl = path;
-                                                        } else {
-                                                          if (path.startsWith('/')) path = path.substring(1);
-                                                          if (path.startsWith('assets/')) {
-                                                            imageUrl = 'https://houseforrent.site/$path';
-                                                          } else if (path.startsWith('uploads/')) {
-                                                            imageUrl = 'https://houseforrent.site/php_backend/api/$path';
-                                                          } else {
-                                                            if (!path.startsWith('assets/')) {
-                                                              imageUrl = 'https://houseforrent.site/assets/$path';
-                                                            } else {
-                                                              imageUrl = 'https://houseforrent.site/$path';
+                                                SizedBox(
+                                                  width: 300,
+                                                  child: Row(
+                                                    children: [
+                                                      Container(
+                                                        width: 48,
+                                                        height: 48,
+                                                        decoration: BoxDecoration(
+                                                          color: colors
+                                                              .surfaceContainerHighest,
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                8,
+                                                              ),
+                                                        ),
+                                                        child: (() {
+                                                          String? imageUrl;
+
+                                                          if (property['main_image'] !=
+                                                                  null &&
+                                                              property['main_image']
+                                                                  .toString()
+                                                                  .isNotEmpty) {
+                                                            String mainImg =
+                                                                property['main_image']
+                                                                    .toString()
+                                                                    .trim();
+                                                            mainImg = mainImg
+                                                                .replaceAll(
+                                                                  '`',
+                                                                  '',
+                                                                );
+                                                            imageUrl = mainImg;
+                                                          } else if (property['images'] !=
+                                                                  null &&
+                                                              property['images']
+                                                                  .isNotEmpty) {
+                                                            var firstImage =
+                                                                property['images'][0];
+                                                            if (firstImage
+                                                                    is Map &&
+                                                                firstImage['url'] !=
+                                                                    null) {
+                                                              String urlStr =
+                                                                  firstImage['url']
+                                                                      .toString()
+                                                                      .trim();
+                                                              urlStr = urlStr
+                                                                  .replaceAll(
+                                                                    '`',
+                                                                    '',
+                                                                  );
+                                                              imageUrl = urlStr;
+                                                            } else if (firstImage
+                                                                is String) {
+                                                              String path =
+                                                                  firstImage
+                                                                      .trim();
+                                                              path = path
+                                                                  .replaceAll(
+                                                                    '`',
+                                                                    '',
+                                                                  );
+
+                                                              if (path
+                                                                  .startsWith(
+                                                                    'http',
+                                                                  )) {
+                                                                imageUrl = path;
+                                                              } else {
+                                                                if (path
+                                                                    .startsWith(
+                                                                      '/',
+                                                                    ))
+                                                                  path = path
+                                                                      .substring(
+                                                                        1,
+                                                                      );
+                                                                if (path
+                                                                    .startsWith(
+                                                                      'assets/',
+                                                                    )) {
+                                                                  imageUrl =
+                                                                      'https://houseforrent.site/$path';
+                                                                } else if (path
+                                                                    .startsWith(
+                                                                      'uploads/',
+                                                                    )) {
+                                                                  imageUrl =
+                                                                      'https://houseforrent.site/php_backend/api/$path';
+                                                                } else {
+                                                                  if (!path
+                                                                      .startsWith(
+                                                                        'assets/',
+                                                                      )) {
+                                                                    imageUrl =
+                                                                        'https://houseforrent.site/assets/$path';
+                                                                  } else {
+                                                                    imageUrl =
+                                                                        'https://houseforrent.site/$path';
+                                                                  }
+                                                                }
+                                                              }
                                                             }
                                                           }
-                                                        }
-                                                      }
-                                                    }
-                                                    return imageUrl != null
-                                                        ? ClipRRect(
-                                                            borderRadius: BorderRadius.circular(8),
-                                                            child: Image.network(imageUrl, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => Icon(Icons.image, color: Colors.grey.shade400))
-                                                          )
-                                                        : Icon(Icons.home, color: Colors.grey.shade600);
-                                                  })(),
+                                                          return imageUrl !=
+                                                                  null
+                                                              ? ClipRRect(
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(
+                                                                        8,
+                                                                      ),
+                                                                  child: Image.network(
+                                                                    imageUrl,
+                                                                    fit: BoxFit
+                                                                        .cover,
+                                                                    errorBuilder:
+                                                                        (
+                                                                          context,
+                                                                          error,
+                                                                          stackTrace,
+                                                                        ) => Icon(
+                                                                          Icons
+                                                                              .image,
+                                                                          color: Colors
+                                                                              .grey
+                                                                              .shade400,
+                                                                        ),
+                                                                  ),
+                                                                )
+                                                              : Icon(
+                                                                  Icons.home,
+                                                                  color: Colors
+                                                                      .grey
+                                                                      .shade600,
+                                                                );
+                                                        })(),
+                                                      ),
+                                                      const SizedBox(width: 16),
+                                                      Expanded(
+                                                        child: Column(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .start,
+                                                          mainAxisSize:
+                                                              MainAxisSize.min,
+                                                          children: [
+                                                            Text(
+                                                              title,
+                                                              style: const TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                fontSize: 15,
+                                                              ),
+                                                              maxLines: 1,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                            ),
+                                                            const SizedBox(
+                                                              height: 4,
+                                                            ),
+                                                            Row(
+                                                              children: [
+                                                                Icon(
+                                                                  Icons
+                                                                      .location_on_outlined,
+                                                                  size: 14,
+                                                                  color: colors
+                                                                      .onSurfaceVariant,
+                                                                ),
+                                                                const SizedBox(
+                                                                  width: 4,
+                                                                ),
+                                                                Expanded(
+                                                                  child: Text(
+                                                                    location,
+                                                                    style: TextStyle(
+                                                                      color: colors
+                                                                          .onSurfaceVariant,
+                                                                      fontSize:
+                                                                          13,
+                                                                    ),
+                                                                    maxLines: 1,
+                                                                    overflow:
+                                                                        TextOverflow
+                                                                            .ellipsis,
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
-                                                const SizedBox(width: 16),
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F2041)), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                                      const SizedBox(height: 4),
-                                                      Row(
+                                                SizedBox(
+                                                  width: 120,
+                                                  child: Text(
+                                                    type,
+                                                    style: TextStyle(
+                                                      color: colors
+                                                          .onSurfaceVariant,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                SizedBox(
+                                                  width: 120,
+                                                  child: Text(
+                                                    '$currency $price',
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Color(0xFFFFC107),
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                SizedBox(
+                                                  width: 100,
+                                                  child: Align(
+                                                    alignment:
+                                                        Alignment.centerLeft,
+                                                    child: Container(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 8,
+                                                            vertical: 4,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color: colors
+                                                            .surfaceContainerHighest,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              12,
+                                                            ),
+                                                      ),
+                                                      child: Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
                                                         children: [
-                                                          const Icon(Icons.location_on_outlined, size: 14, color: Colors.black54),
-                                                          const SizedBox(width: 4),
-                                                          Expanded(child: Text(location, style: const TextStyle(color: Colors.black54, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                                                          Icon(
+                                                            Icons
+                                                                .remove_red_eye,
+                                                            size: 14,
+                                                            color: colors
+                                                                .onSurfaceVariant,
+                                                          ),
+                                                          const SizedBox(
+                                                            width: 4,
+                                                          ),
+                                                          Flexible(
+                                                            child: Text(
+                                                              '$views',
+                                                              style: TextStyle(
+                                                                fontSize: 12,
+                                                                color: colors
+                                                                    .onSurfaceVariant,
+                                                              ),
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                            ),
+                                                          ),
                                                         ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                                SizedBox(
+                                                  width: 120,
+                                                  child: Align(
+                                                    alignment:
+                                                        Alignment.centerLeft,
+                                                    child: Container(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 8,
+                                                            vertical: 4,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors
+                                                            .green
+                                                            .shade50,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              12,
+                                                            ),
+                                                      ),
+                                                      child: Text(
+                                                        status.toUpperCase(),
+                                                        style: TextStyle(
+                                                          color: Colors
+                                                              .green
+                                                              .shade700,
+                                                          fontSize: 12,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                        textAlign:
+                                                            TextAlign.center,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                                SizedBox(
+                                                  width: 120,
+                                                  child: Text(
+                                                    displayDate,
+                                                    style: TextStyle(
+                                                      color: colors
+                                                          .onSurfaceVariant,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                SizedBox(
+                                                  width:
+                                                      180, // Use explicit width instead of Expanded to fix 'no size' error
+                                                  child: Wrap(
+                                                    spacing: 4,
+                                                    runSpacing: 4,
+                                                    children: [
+                                                      _buildActionButton(
+                                                        Icons.edit_outlined,
+                                                        () => _editProperty(
+                                                          property,
+                                                        ),
+                                                      ),
+                                                      _buildStatusToggleAction(
+                                                        property,
+                                                      ),
+                                                      _buildActionButton(
+                                                        Icons
+                                                            .visibility_outlined,
+                                                        () => _viewProperty(
+                                                          property,
+                                                        ),
+                                                      ),
+                                                      _buildActionButton(
+                                                        Icons.delete_outline,
+                                                        () =>
+                                                            _confirmDeleteProperty(
+                                                              property,
+                                                            ),
                                                       ),
                                                     ],
                                                   ),
                                                 ),
                                               ],
                                             ),
-                                          ),
-                                          SizedBox(
-                                            width: 120,
-                                            child: Text(
-                                              type,
-                                              style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w500),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            width: 120,
-                                            child: Text(
-                                              '$currency $price',
-                                              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFFC107)),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            width: 100, 
-                                            child: Align(
-                                              alignment: Alignment.centerLeft,
-                                              child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.grey.shade100,
-                                                  borderRadius: BorderRadius.circular(12),
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    const Icon(Icons.remove_red_eye, size: 14, color: Colors.black54),
-                                                    const SizedBox(width: 4),
-                                                    Flexible(child: Text('$views', style: const TextStyle(fontSize: 12, color: Colors.black54), overflow: TextOverflow.ellipsis)),
-                                                  ],
-                                                ),
-                                              ),
-                                            )
-                                          ),
-                                          SizedBox(
-                                            width: 120,
-                                            child: Align(
-                                              alignment: Alignment.centerLeft,
-                                              child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.green.shade50,
-                                                  borderRadius: BorderRadius.circular(12),
-                                                ),
-                                                child: Text(
-                                                  status.toUpperCase(),
-                                                  style: TextStyle(color: Colors.green.shade700, fontSize: 12, fontWeight: FontWeight.bold),
-                                                  textAlign: TextAlign.center,
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            width: 120,
-                                            child: Text(
-                                              displayDate,
-                                              style: const TextStyle(color: Colors.black54),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            width: 180, // Use explicit width instead of Expanded to fix 'no size' error
-                                            child: Wrap(
-                                              spacing: 4,
-                                              runSpacing: 4,
-                                              children: [
-                                                _buildActionButton(Icons.edit_outlined, () => _editProperty(property)),
-                                                _buildStatusToggleAction(property),
-                                                _buildActionButton(Icons.visibility_outlined, () => _viewProperty(property)),
-                                                _buildActionButton(Icons.delete_outline, () => _confirmDeleteProperty(property)),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
+                                          );
+                                        },
                                       ),
-                                    );
-                                  },
-                                ),
-                              )),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
-    )],
+      ],
     );
   }
 
   Widget _buildActionButton(IconData icon, VoidCallback onPressed) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(4),
+        color: colors.surfaceContainerHighest,
+        border: Border.all(color: colors.outlineVariant),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: IconButton(
-        icon: Icon(icon, color: Colors.black54, size: 16),
+        icon: Icon(icon, color: colors.onSurfaceVariant, size: 16),
         onPressed: onPressed,
         padding: const EdgeInsets.all(8),
         constraints: const BoxConstraints(),
@@ -381,13 +716,18 @@ class _DealerPropertiesScreenState extends State<DealerPropertiesScreen> {
     final isTaken = ['taken', 'rented', 'sold'].contains(status);
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: isTaken ? Colors.green.shade300 : Colors.orange.shade300),
-        borderRadius: BorderRadius.circular(4),
-        color: isTaken ? Colors.green.shade50 : Colors.orange.shade50,
+        border: Border.all(
+          color: isTaken ? Colors.green.shade300 : Colors.orange.shade300,
+        ),
+        borderRadius: BorderRadius.circular(8),
+        color: (isTaken ? Colors.green : Colors.orange).withValues(alpha: 0.16),
       ),
       child: IconButton(
-        icon: Icon(isTaken ? Icons.check_circle : Icons.check_circle_outline, 
-                   color: isTaken ? Colors.green.shade700 : Colors.orange.shade700, size: 16),
+        icon: Icon(
+          isTaken ? Icons.check_circle : Icons.check_circle_outline,
+          color: isTaken ? Colors.green.shade700 : Colors.orange.shade700,
+          size: 16,
+        ),
         tooltip: isTaken ? 'Mark as Available' : 'Mark as Taken',
         onPressed: () => _togglePropertyStatus(property),
         padding: const EdgeInsets.all(8),
@@ -399,12 +739,19 @@ class _DealerPropertiesScreenState extends State<DealerPropertiesScreen> {
   Future<void> _togglePropertyStatus(dynamic property) async {
     final propertyId = _propertyIdOf(property);
     if (propertyId == null) return;
-    
-    final currentStatus = (property['status'] ?? 'available').toString().toLowerCase();
-    final newStatus = ['taken', 'rented', 'sold'].contains(currentStatus) ? 'available' : 'taken';
-    
+
+    final currentStatus = (property['status'] ?? 'available')
+        .toString()
+        .toLowerCase();
+    final newStatus = ['taken', 'rented', 'sold'].contains(currentStatus)
+        ? 'available'
+        : 'taken';
+
     try {
-      final response = await ApiService.updatePropertyStatus(propertyId, newStatus);
+      final response = await ApiService.updatePropertyStatus(
+        propertyId,
+        newStatus,
+      );
       if (response['status'] == 'success') {
         _loadProperties(); // Reload properties to show updated status
         ScaffoldMessenger.of(context).showSnackBar(
@@ -412,13 +759,15 @@ class _DealerPropertiesScreenState extends State<DealerPropertiesScreen> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response['message'] ?? 'Failed to update status')),
+          SnackBar(
+            content: Text(response['message'] ?? 'Failed to update status'),
+          ),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error updating status')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error updating status')));
     }
   }
 
@@ -428,9 +777,8 @@ class _DealerPropertiesScreenState extends State<DealerPropertiesScreen> {
     final updated = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => DealerAddPropertyScreen(
-          propertyToEdit: propertyMap,
-        ),
+        builder: (context) =>
+            DealerAddPropertyScreen(propertyToEdit: propertyMap),
       ),
     );
 
@@ -455,7 +803,9 @@ class _DealerPropertiesScreenState extends State<DealerPropertiesScreen> {
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Delete Property'),
-          content: Text('Are you sure you want to delete "$title"? This action cannot be undone.'),
+          content: Text(
+            'Are you sure you want to delete "$title"? This action cannot be undone.',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -463,7 +813,10 @@ class _DealerPropertiesScreenState extends State<DealerPropertiesScreen> {
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade600, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade600,
+                foregroundColor: Colors.white,
+              ),
               child: const Text('Delete'),
             ),
           ],
@@ -484,13 +837,19 @@ class _DealerPropertiesScreenState extends State<DealerPropertiesScreen> {
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response['message'] ?? 'Failed to delete property')),
+          SnackBar(
+            content: Text(response['message'] ?? 'Failed to delete property'),
+          ),
         );
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppError.userMessage(e, fallback: 'Failed to delete property.'))),
+        SnackBar(
+          content: Text(
+            AppError.userMessage(e, fallback: 'Failed to delete property.'),
+          ),
+        ),
       );
     }
   }

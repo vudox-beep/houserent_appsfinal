@@ -3,33 +3,7 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
-require_once '../config/config.php';
-
-// --- Rate Limiting Start ---
-$limiterPath = __DIR__ . '/../php_backend/api/includes/RateLimiter.php';
-if (file_exists($limiterPath)) {
-    require_once $limiterPath;
-    $limiter = new RateLimiter(10, 60); // 10 payment-related requests per 60 seconds
-    
-    // Get Real IP to support Cloudflare/Proxies
-    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
-        $ip = $_SERVER['HTTP_CF_CONNECTING_IP'];
-    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-        $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
-        $ip = trim($ips[0]);
-    }
-
-    if (!$limiter->check($ip . '_tenant_payment')) {
-        http_response_code(429);
-        echo json_encode([
-            'status' => 'error', 
-            'message' => 'Too many requests. Please try again later.'
-        ]);
-        exit();
-    }
-}
-// --- Rate Limiting End ---
+require_once __DIR__ . '/../config/config.php';
 
 // If LencoAPI is not found via include, use this embedded version
 if (!class_exists('LencoAPI')) {
@@ -178,6 +152,230 @@ try {
     exit;
 }
 
+/**
+ * Tenant Pro helpers — keep existing actions/response shapes.
+ * Backstop: reconcile pending Lenco payments + block double pay when already active.
+ */
+function tcp_success_statuses() {
+    return ['successful', 'success', 'completed', 'paid', 'approved'];
+}
+
+function tcp_is_success_status($status) {
+    return in_array(strtolower(trim((string) $status)), tcp_success_statuses(), true);
+}
+
+function tcp_user_has_premium(PDO $conn, $userId) {
+    $stmt = $conn->prepare(
+        "SELECT id FROM premium_contacts WHERE user_id = ? AND status = 'active' LIMIT 1"
+    );
+    $stmt->execute([$userId]);
+    return (bool) $stmt->fetch();
+}
+
+function tcp_ensure_pending_transaction(PDO $conn, $userId, $reference, $amount = 5.0, $currency = 'ZMW') {
+    $reference = trim((string) $reference);
+    if ($reference === '') {
+        return;
+    }
+    $check = $conn->prepare('SELECT id FROM transactions WHERE reference = ? LIMIT 1');
+    $check->execute([$reference]);
+    if ($check->fetch()) {
+        return;
+    }
+    try {
+        $stmt = $conn->prepare(
+            "INSERT INTO transactions (user_id, reference, amount, currency, status, payment_method, message)
+             VALUES (?, ?, ?, ?, 'pending', 'mobile-money', 'Tenant Contact Access Fee')"
+        );
+        $stmt->execute([$userId, $reference, $amount, $currency]);
+    } catch (Exception $e) {
+        // Unique race is fine — another request inserted it.
+    }
+}
+
+function tcp_activate_premium(PDO $conn, $userId, $reference, array $resData) {
+    $amount = isset($resData['amount']) ? (float) $resData['amount'] : 5.00;
+    $currency = $resData['currency'] ?? 'ZMW';
+    $lenco_reference = $resData['lencoReference'] ?? ($resData['reference'] ?? $reference);
+    $payment_type = $resData['type'] ?? 'mobile-money';
+
+    $operator = null;
+    $phone_number = null;
+    $account_name = null;
+    $operator_transaction_id = null;
+    if (!empty($resData['mobileMoneyDetails']) && is_array($resData['mobileMoneyDetails'])) {
+        $operator = $resData['mobileMoneyDetails']['operator'] ?? null;
+        $phone_number = $resData['mobileMoneyDetails']['phone'] ?? null;
+        $account_name = $resData['mobileMoneyDetails']['accountName'] ?? null;
+        $operator_transaction_id = $resData['mobileMoneyDetails']['operatorTransactionId'] ?? null;
+    }
+
+    tcp_ensure_pending_transaction($conn, $userId, $reference, $amount, $currency);
+
+    $stmt = $conn->prepare(
+        "UPDATE transactions SET status = 'successful', lenco_reference = ? WHERE reference = ?"
+    );
+    $stmt->execute([$lenco_reference, $reference]);
+
+    $checkPremium = $conn->prepare('SELECT id FROM premium_contacts WHERE user_id = ? LIMIT 1');
+    $checkPremium->execute([$userId]);
+    if (!$checkPremium->fetch()) {
+        $stmtPremium = $conn->prepare(
+            "INSERT INTO premium_contacts
+                (user_id, transaction_reference, amount_paid, lenco_reference, payment_type, operator, phone_number, account_name, operator_transaction_id, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')"
+        );
+        $stmtPremium->execute([
+            $userId,
+            $reference,
+            $amount,
+            $lenco_reference,
+            $payment_type,
+            $operator,
+            $phone_number,
+            $account_name,
+            $operator_transaction_id,
+        ]);
+    } else {
+        $stmtPremium = $conn->prepare(
+            "UPDATE premium_contacts
+             SET status = 'active',
+                 transaction_reference = ?,
+                 amount_paid = ?,
+                 lenco_reference = ?,
+                 payment_type = ?,
+                 operator = ?,
+                 phone_number = ?,
+                 account_name = ?,
+                 operator_transaction_id = ?
+             WHERE user_id = ?"
+        );
+        $stmtPremium->execute([
+            $reference,
+            $amount,
+            $lenco_reference,
+            $payment_type,
+            $operator,
+            $phone_number,
+            $account_name,
+            $operator_transaction_id,
+            $userId,
+        ]);
+    }
+}
+
+/**
+ * Settle one reference from a Lenco verify payload.
+ * Pending/processing do NOT unlock access (avoids free unlock).
+ * Successful settles are idempotent (safe to call again).
+ *
+ * @return array{ok:bool,status:string,message:string,has_paid:bool}
+ */
+function tcp_settle_from_lenco(PDO $conn, $userId, $reference, array $result) {
+    if (!(isset($result['status']) && $result['status'] === true)) {
+        return [
+            'ok' => false,
+            'status' => 'error',
+            'message' => 'Verification failed',
+            'has_paid' => tcp_user_has_premium($conn, $userId),
+        ];
+    }
+
+    $resData = is_array($result['data'] ?? null) ? $result['data'] : [];
+    $payStatus = strtolower((string) ($resData['status'] ?? ''));
+
+    if (tcp_is_success_status($payStatus)) {
+        try {
+            tcp_activate_premium($conn, $userId, $reference, $resData);
+        } catch (Exception $e) {
+            // If already active from a parallel request, still report success.
+            if (tcp_user_has_premium($conn, $userId)) {
+                return [
+                    'ok' => true,
+                    'status' => 'success',
+                    'message' => 'Payment already recorded',
+                    'has_paid' => true,
+                ];
+            }
+            return [
+                'ok' => false,
+                'status' => 'error',
+                'message' => 'Could not save payment. Please retry verify.',
+                'has_paid' => false,
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'status' => 'success',
+            'message' => 'Payment successful',
+            'has_paid' => true,
+        ];
+    }
+
+    if (in_array($payStatus, ['pending', 'processing'], true)) {
+        return [
+            'ok' => false,
+            'status' => $payStatus,
+            'message' => 'Payment is ' . $payStatus,
+            'has_paid' => tcp_user_has_premium($conn, $userId),
+        ];
+    }
+
+    return [
+        'ok' => false,
+        'status' => $payStatus !== '' ? $payStatus : 'error',
+        'message' => 'Payment is ' . ($payStatus !== '' ? $payStatus : 'unknown'),
+        'has_paid' => tcp_user_has_premium($conn, $userId),
+    ];
+}
+
+/** Re-check recent pending Tenant Pro txs with Lenco (missed callback / closed WebView). */
+function tcp_reconcile_pending(PDO $conn, $userId) {
+    if (tcp_user_has_premium($conn, $userId)) {
+        return true;
+    }
+
+    try {
+        $stmt = $conn->prepare(
+            "SELECT reference FROM transactions
+             WHERE user_id = ?
+               AND status = 'pending'
+               AND (message LIKE '%Tenant Contact%' OR message LIKE '%Contact Access%')
+               AND created_at >= (NOW() - INTERVAL 7 DAY)
+             ORDER BY id DESC
+             LIMIT 8"
+        );
+        $stmt->execute([$userId]);
+        $refs = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    } catch (Exception $e) {
+        return false;
+    }
+
+    if (empty($refs)) {
+        return false;
+    }
+
+    $lenco = new LencoAPI();
+    foreach ($refs as $reference) {
+        $reference = trim((string) $reference);
+        if ($reference === '') {
+            continue;
+        }
+        try {
+            $result = $lenco->verifyTransaction($reference);
+            $settled = tcp_settle_from_lenco($conn, $userId, $reference, is_array($result) ? $result : []);
+            if (!empty($settled['has_paid'])) {
+                return true;
+            }
+        } catch (Exception $e) {
+            // Try next pending reference.
+        }
+    }
+
+    return tcp_user_has_premium($conn, $userId);
+}
+
 // Capture request data properly regardless of Content-Type
 $input = file_get_contents("php://input");
 $data = json_decode($input, true);
@@ -197,11 +395,9 @@ if (empty($user_id)) {
 
 if ($action === 'get_status') {
     header('Content-Type: application/json');
-    // Check if the user has active premium contacts access
-    $stmt = $conn->prepare("SELECT id FROM premium_contacts WHERE user_id = ? AND status = 'active' LIMIT 1");
-    $stmt->execute([$user_id]);
-    $has_paid = $stmt->fetch() ? true : false;
-    
+    // Backstop: if client paid but verify never saved, catch it here.
+    $has_paid = tcp_reconcile_pending($conn, $user_id);
+
     echo json_encode([
         'status' => 'success',
         'has_paid' => $has_paid
@@ -211,6 +407,18 @@ if ($action === 'get_status') {
 
 if ($action === 'initiate') {
     header('Content-Type: application/json');
+
+    // Prevent paying twice when Tenant Pro is already active.
+    if (tcp_user_has_premium($conn, $user_id) || tcp_reconcile_pending($conn, $user_id)) {
+        echo json_encode([
+            'status' => 'success',
+            'message' => 'Premium access is already active on this account.',
+            'has_paid' => true,
+            'already_paid' => true,
+        ]);
+        exit;
+    }
+
     $phone = $data['phone'] ?? '';
     $operator = $data['operator'] ?? 'mtn';
     $country = $data['country'] ?? 'zm';
@@ -294,54 +502,56 @@ if ($action === 'verify') {
         echo json_encode(['status' => 'error', 'message' => 'Reference is required']);
         exit;
     }
-    
+
+    // Idempotent: already unlocked — do not require another Lenco round-trip.
+    if (tcp_user_has_premium($conn, $user_id)) {
+        echo json_encode([
+            'status' => 'success',
+            'message' => 'Payment already recorded',
+            'has_paid' => true,
+            'already_paid' => true,
+        ]);
+        exit;
+    }
+
+    // Ensure we have a pending row even if pay_page insert was skipped.
+    $amountHint = 5.00;
+    try {
+        $priceStmt = $conn->query("SELECT setting_value FROM settings WHERE setting_key = 'tenant_pro_price'");
+        $amountHint = (float) ($priceStmt->fetchColumn() ?: 5);
+    } catch (Exception $e) {
+    }
+    tcp_ensure_pending_transaction($conn, $user_id, $reference, $amountHint);
+
     $lenco = new LencoAPI();
     $result = $lenco->verifyTransaction($reference);
-    
-    if (isset($result['status']) && $result['status'] === true) {
-        $resData = $result['data'];
-        $status = strtolower($resData['status']);
-        
-        if ($status === 'successful') {
-            try {
-                $amount = isset($resData['amount']) ? (float)$resData['amount'] : 5.00;
-                $currency = $resData['currency'] ?? 'ZMW';
-                $lenco_reference = $resData['lencoReference'] ?? null;
-                $payment_type = $resData['type'] ?? 'mobile-money';
-                
-                $operator = null;
-                $phone_number = null;
-                $account_name = null;
-                $operator_transaction_id = null;
+    $settled = tcp_settle_from_lenco($conn, $user_id, $reference, is_array($result) ? $result : []);
 
-                if (!empty($resData['mobileMoneyDetails'])) {
-                    $operator = $resData['mobileMoneyDetails']['operator'] ?? null;
-                    $phone_number = $resData['mobileMoneyDetails']['phone'] ?? null;
-                    $account_name = $resData['mobileMoneyDetails']['accountName'] ?? null;
-                    $operator_transaction_id = $resData['mobileMoneyDetails']['operatorTransactionId'] ?? null;
-                }
-
-                $stmt = $conn->prepare("UPDATE transactions SET status = 'successful', lenco_reference = ? WHERE reference = ?");
-                $stmt->execute([$lenco_reference, $reference]);
-
-                $checkPremium = $conn->prepare("SELECT id FROM premium_contacts WHERE user_id = ?");
-                $checkPremium->execute([$user_id]);
-                if (!$checkPremium->fetch()) {
-                    $stmtPremium = $conn->prepare("INSERT INTO premium_contacts (user_id, transaction_reference, amount_paid, lenco_reference, payment_type, operator, phone_number, account_name, operator_transaction_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')");
-                    $stmtPremium->execute([$user_id, $reference, $amount, $lenco_reference, $payment_type, $operator, $phone_number, $account_name, $operator_transaction_id]);
-                } else {
-                    $stmtPremium = $conn->prepare("UPDATE premium_contacts SET status = 'active', transaction_reference = ?, lenco_reference = ?, payment_type = ?, operator = ?, phone_number = ?, account_name = ?, operator_transaction_id = ? WHERE user_id = ?");
-                    $stmtPremium->execute([$reference, $lenco_reference, $payment_type, $operator, $phone_number, $account_name, $operator_transaction_id, $user_id]);
-                }
-            } catch (Exception $e) {}
-            
-            echo json_encode(['status' => 'success', 'message' => 'Payment successful']);
-        } else {
-            echo json_encode(['status' => 'pending', 'message' => 'Payment is still ' . $status]);
-        }
-    } else {
-        echo json_encode(['status' => 'error', 'message' => 'Verification failed']);
+    if (!empty($settled['ok'])) {
+        echo json_encode([
+            'status' => 'success',
+            'message' => $settled['message'] ?? 'Payment successful',
+            'has_paid' => true,
+        ]);
+        exit;
     }
+
+    // Keep pending/processing statuses so the pay page can keep polling.
+    if (in_array($settled['status'] ?? '', ['pending', 'processing'], true)) {
+        echo json_encode([
+            'status' => $settled['status'],
+            'message' => $settled['message'] ?? ('Payment is ' . $settled['status']),
+            'has_paid' => !empty($settled['has_paid']),
+        ]);
+        exit;
+    }
+
+    echo json_encode([
+        'status' => $settled['status'] ?? 'error',
+        'message' => $settled['message'] ?? 'Verification failed',
+        'has_paid' => !empty($settled['has_paid']),
+        'debug' => $result,
+    ]);
     exit;
 }
 
@@ -359,12 +569,19 @@ if ($action === 'history') {
 }
 
 if ($action === 'pay_page') {
+    // Fetch the dynamic price
+    $tenant_price_stmt = $conn->query("SELECT setting_value FROM settings WHERE setting_key = 'tenant_pro_price'");
+    $tenant_pro_price = $tenant_price_stmt->fetchColumn() ?: '5';
+
+    // Recover paid-but-unsaved purchases before offering another checkout.
+    $alreadyPaid = tcp_reconcile_pending($conn, $user_id);
+
     // Render the Lenco Inline JS page
     $phone = $_REQUEST['phone'] ?? '0970000000';
     $email = $_REQUEST['email'] ?? 'tenant@houserent.site';
     $name = $_REQUEST['name'] ?? 'Tenant';
     $reference = 'ref-' . time() . '-' . $user_id;
-    $amount = 5; // K5
+    $amount = (int)$tenant_pro_price;
     
     // Split name
     $nameParts = explode(' ', $name);
@@ -375,6 +592,11 @@ if ($action === 'pay_page') {
     // The previous API version required ngwee/kobo, but the V2 docs state:
     // "The amount field should not be converted to the lowest currency unit."
     $amount_lowest_denom = $amount;
+
+    // Save pending BEFORE Lenco so later verify/get_status can unlock even if WebView closes.
+    if (!$alreadyPaid) {
+        tcp_ensure_pending_transaction($conn, $user_id, $reference, (float) $amount, 'ZMW');
+    }
     
     // Lenco Public Key from your config file
     // The inline JS requires the public key which starts with 'pub-' (LENCO_SECRET in config)
@@ -407,11 +629,24 @@ if ($action === 'pay_page') {
                         <p class="text-muted">Unlock contact details for all listings.</p>
                     </div>
 
+                    <?php if ($alreadyPaid): ?>
+                    <div class="card border-0 shadow rounded-3 text-center">
+                        <div class="card-body p-5">
+                            <i class="bi bi-check-circle-fill text-success mb-3" style="font-size: 4rem;"></i>
+                            <h3 class="fw-bold mb-3">Already unlocked</h3>
+                            <p class="text-muted mb-4">Premium Contact Access is already active. You do not need to pay again.</p>
+                            <div class="d-grid">
+                                <button type="button" class="btn btn-success btn-lg fw-bold" onclick="finishPayment()">Continue to Contacts</button>
+                            </div>
+                        </div>
+                    </div>
+                    <?php else: ?>
+
                     <div class="card border-0 shadow rounded-3 position-relative overflow-hidden" id="paymentCard">
                         <div class="position-absolute top-0 end-0 bg-warning text-dark px-3 py-1 fw-bold small rounded-bottom-start">RECOMMENDED</div>
                         <div class="card-body p-4 text-center d-flex flex-column">
                             <h5 class="fw-bold text-primary mb-3">Tenant Pro</h5>
-                            <h1 class="display-4 fw-bold mb-0">ZMW 5.00</h1>
+                            <h1 class="display-4 fw-bold mb-0">ZMW <?php echo htmlspecialchars(number_format($tenant_pro_price, 2)); ?></h1>
                             <p class="text-muted mb-4">One Time Payment</p>
                             <ul class="list-unstyled text-start mb-auto mx-auto" style="max-width: 250px;">
                                 <li class="mb-2"><i class="bi bi-check-circle-fill text-primary me-2"></i> Direct Call & WhatsApp</li>
@@ -463,6 +698,7 @@ if ($action === 'pay_page') {
                                 <div class="d-grid mt-4">
                                     <button type="button" id="payButton" class="btn btn-primary btn-lg" onclick="initiateLencoPayment()">Proceed to Pay</button>
                                 </div>
+                                <p class="text-danger text-center fw-bold small mt-3 mb-0">Please don't leave this page until your payment has been processed.</p>
                             </form>
                         </div>
                     </div>
@@ -484,6 +720,7 @@ if ($action === 'pay_page') {
                             </div>
                         </div>
                     </div>
+                    <?php endif; ?>
 
                 </div>
             </div>
@@ -493,6 +730,92 @@ if ($action === 'pay_page') {
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
         <script>
+        window.successfulPaymentRef = <?php echo $alreadyPaid ? json_encode('already-active') : 'null'; ?>;
+        var payReference = <?php echo json_encode($reference); ?>;
+
+        function paymentApiBase() {
+            return window.location.pathname.indexOf('/api/') === -1 ? 'api/' : '';
+        }
+
+        function showSuccessUi(ref) {
+            var paymentCard = document.getElementById('paymentCard');
+            if (paymentCard) paymentCard.style.display = 'none';
+            var receipt = document.getElementById('receiptNumber');
+            if (receipt) receipt.innerText = ref || payReference;
+            var successCard = document.getElementById('successCard');
+            if (successCard) successCard.style.display = 'block';
+            window.successfulPaymentRef = ref || payReference;
+        }
+
+        function verifyPaymentOnce(ref) {
+            return $.ajax({
+                url: paymentApiBase() + 'tenant_contact_payment.php',
+                method: 'get',
+                dataType: 'json',
+                data: {
+                    action: 'verify',
+                    user_id: '<?php echo addslashes((string) $user_id); ?>',
+                    reference: ref
+                }
+            }).then(function (verifyResponse) {
+                if (verifyResponse && (
+                    verifyResponse.status === 'success' ||
+                    verifyResponse.has_paid === true ||
+                    verifyResponse.already_paid === true
+                )) {
+                    showSuccessUi(ref);
+                    return { done: true, pending: false };
+                }
+                if (verifyResponse && (verifyResponse.status === 'pending' || verifyResponse.status === 'processing')) {
+                    return { done: false, pending: true };
+                }
+                return {
+                    done: false,
+                    pending: false,
+                    message: (verifyResponse && (verifyResponse.message || verifyResponse.status)) || 'Unknown error'
+                };
+            });
+        }
+
+        function pollVerifyUntilSettled(ref, attemptsLeft) {
+            attemptsLeft = typeof attemptsLeft === 'number' ? attemptsLeft : 12;
+            var btn = document.getElementById('payButton');
+            if (attemptsLeft <= 0) {
+                if (btn) {
+                    btn.innerHTML = 'Proceed to Pay';
+                    btn.disabled = false;
+                }
+                alert('Payment is still confirming. If money left your phone, reopen contacts — unlocking will finish automatically.');
+                return;
+            }
+            verifyPaymentOnce(ref).done(function (state) {
+                if (state.done) {
+                    if (btn) {
+                        btn.innerHTML = 'Proceed to Pay';
+                        btn.disabled = false;
+                    }
+                    return;
+                }
+                if (state.pending) {
+                    if (btn) btn.innerHTML = 'Confirming... (' + attemptsLeft + ')';
+                    setTimeout(function () {
+                        pollVerifyUntilSettled(ref, attemptsLeft - 1);
+                    }, 4000);
+                    return;
+                }
+                if (btn) {
+                    btn.innerHTML = 'Proceed to Pay';
+                    btn.disabled = false;
+                }
+                alert('Payment status: ' + (state.message || 'Unknown error'));
+            }).fail(function () {
+                if (btn) btn.innerHTML = 'Retrying verify...';
+                setTimeout(function () {
+                    pollVerifyUntilSettled(ref, attemptsLeft - 1);
+                }, 4000);
+            });
+        }
+
         function togglePaymentFields() {
             var method = document.getElementById('payment_method').value;
             var mmFields = document.getElementById('mobile_money_fields');
@@ -608,7 +931,7 @@ if ($action === 'pay_page') {
             try {
                 LencoPay.getPaid({
                     key: '<?php echo $publicKey; ?>',
-                    reference: '<?php echo $reference; ?>',
+                    reference: payReference,
                     email: '<?php echo htmlspecialchars($email); ?>',
                     amount: <?php echo $amount_lowest_denom; ?>, // Amount is now normal K5, NOT multiplied by 100 per V2 docs
                     currency: "ZMW",
@@ -621,41 +944,24 @@ if ($action === 'pay_page') {
                     },
                     onSuccess: function (response) {
                         btn.innerHTML = 'Verifying Payment...';
-                        
-                        $.ajax({
-                            url: '?action=verify&user_id=<?php echo $user_id; ?>&reference=' + response.reference,
-                            method: 'get',
-                            success: function (verifyResponse) {
-                                if (verifyResponse && verifyResponse.status === 'success') {
-                                    // Hide payment form and show success UI
-                                    document.getElementById('paymentCard').style.display = 'none';
-                                    document.getElementById('receiptNumber').innerText = response.reference;
-                                    document.getElementById('successCard').style.display = 'block';
-                                    
-                                    // Store reference for finishPayment
-                                    window.successfulPaymentRef = response.reference;
-                                } else {
-                                    alert('Payment verified but status is pending/failed: ' + (verifyResponse.message || ''));
-                                    btn.innerHTML = 'Proceed to Pay';
-                                    btn.disabled = false;
-                                }
-                            },
-                            error: function () {
-                                alert('Could not verify payment status automatically. Please check your account.');
-                                btn.innerHTML = 'Proceed to Pay';
-                                btn.disabled = false;
-                            }
-                        });
+                        var ref = (response && response.reference) ? response.reference : payReference;
+                        window.successfulPaymentRef = ref;
+                        // Poll until Lenco settles — covers slow mobile-money confirms.
+                        pollVerifyUntilSettled(ref, 12);
                     },
                     onClose: function () {
                         console.log('Payment was not completed, window closed.');
-                        btn.innerHTML = 'Proceed to Pay';
-                        btn.disabled = false;
+                        // One reconcile attempt in case they paid before closing.
+                        verifyPaymentOnce(payReference).always(function () {
+                            btn.innerHTML = 'Proceed to Pay';
+                            btn.disabled = false;
+                        });
                     },
                     onConfirmationPending: function () {
-                        alert('Your purchase will be completed when the payment is confirmed');
-                        btn.innerHTML = 'Proceed to Pay';
-                        btn.disabled = false;
+                        btn.innerHTML = 'Waiting for confirmation...';
+                        btn.disabled = true;
+                        // Keep verifying instead of telling the user to leave.
+                        pollVerifyUntilSettled(payReference, 15);
                     }
                 });
             } catch (error) {
@@ -667,11 +973,12 @@ if ($action === 'pay_page') {
         }
 
         function finishPayment() {
-            var ref = window.successfulPaymentRef || 'unknown';
+            var ref = window.successfulPaymentRef || payReference || 'unknown';
             if (window.Flutter) {
                 window.Flutter.postMessage(JSON.stringify({ status: 'success', reference: ref }));
             } else {
-                window.history.back();
+                // Force reload the page to refresh the lock status
+                window.location.reload();
             }
         }
         </script>

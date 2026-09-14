@@ -17,6 +17,12 @@ if (!$user || !isset($user['id'])) {
     echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
     exit;
 }
+// Same as landlords: agent and private company manage their own listings.
+$role = strtolower(trim((string) ($user['role'] ?? '')));
+if (!in_array($role, ['dealer', 'agent', 'company', 'admin'], true)) {
+    echo json_encode(['status' => 'error', 'message' => 'User role not authorized']);
+    exit;
+}
 $dealer_id = $user['id'];
 
 $data = json_decode(file_get_contents("php://input"), true);

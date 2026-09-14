@@ -4,12 +4,16 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
  require_once '../../db.php'; 
- require_once '../../includes/LencoAPI.php'; 
+ require_once '../../auth.php';
+ require_once '../../includes/LencoAPI.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
+
+$authUser = authorize(['dealer', 'admin']);
+$token_dealer_id = (int)$authUser['id'];
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'GET') {
     echo json_encode(['status' => 'error', 'message' => 'Invalid request method. Please use POST or GET']);
@@ -19,20 +23,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'GET
 $data = json_decode(file_get_contents("php://input"), true);
 if (empty($data)) $data = $_POST;
 if (empty($data)) $data = $_GET;
-
-$token_user_id = '';
-$headers = function_exists('getallheaders') ? getallheaders() : [];
-$authorization = $headers['Authorization'] ?? $headers['authorization'] ?? ($_SERVER['HTTP_AUTHORIZATION'] ?? '');
-if (!empty($authorization)) {
-    $token = str_replace('Bearer ', '', $authorization);
-    $tokenParts = explode('.', $token);
-    if (count($tokenParts) === 3) {
-        $payload = json_decode(base64_decode($tokenParts[1]), true);
-        if (isset($payload['id'])) {
-            $token_user_id = $payload['id'];
-        }
-    }
-}
 
 $action = $data['action'] ?? $_POST['action'] ?? $_GET['action'] ?? '';
 if ($action === '') {
@@ -47,7 +37,7 @@ if ($action === '') {
 
 try {
 if ($action === 'get_tenants') {
-    $dealer_id = $data['dealer_id'] ?? $_POST['dealer_id'] ?? $_REQUEST['dealer_id'] ?? $data['user_id'] ?? $_REQUEST['user_id'] ?? $token_user_id ?? '';
+    $dealer_id = $token_dealer_id;
     if (empty($dealer_id)) {
         echo json_encode(['status' => 'error', 'message' => 'Dealer ID is required']);
         exit;
@@ -213,7 +203,7 @@ if ($action === 'get_tenants') {
 
 // Handle Approve/Reject Payment
 if ($action === 'verify_payment') {
-    $dealer_id = $data['dealer_id'] ?? $_POST['dealer_id'] ?? $_REQUEST['dealer_id'] ?? $data['user_id'] ?? $_REQUEST['user_id'] ?? $token_user_id ?? '';
+    $dealer_id = $token_dealer_id;
     $payment_id = $data['payment_id'] ?? $_POST['payment_id'] ?? '';
     $verify_status = $data['status'] ?? $_POST['status'] ?? ''; // 'approved' or 'rejected'
 
@@ -258,7 +248,7 @@ if ($action === 'verify_payment') {
 }
 
 // Default action: add_tenant
-$dealer_id = $data['dealer_id'] ?? $_POST['dealer_id'] ?? $_REQUEST['dealer_id'] ?? $data['user_id'] ?? $_REQUEST['user_id'] ?? $token_user_id ?? '';
+$dealer_id = $token_dealer_id;
 $email = trim($data['email'] ?? $_POST['email'] ?? $_REQUEST['email'] ?? '');
 $property_id = $data['property_id'] ?? $_POST['property_id'] ?? $_REQUEST['property_id'] ?? '';
 $rent_amount = $data['rent_amount'] ?? $_POST['rent_amount'] ?? $_REQUEST['rent_amount'] ?? '';
@@ -271,16 +261,7 @@ if (empty($dealer_id) || empty($email) || empty($property_id) || empty($rent_amo
     echo json_encode([
         'status' => 'error', 
         'message' => 'Missing required fields',
-        'debug' => [
-            'dealer_id' => $dealer_id,
-            'email' => $email,
-            'property_id' => $property_id,
-            'rent_amount' => $rent_amount,
-            'start_date' => $start_date,
-            'raw_post' => $_POST,
-            'raw_get' => $_GET,
-            'raw_input' => file_get_contents("php://input")
-        ]
+        'dealer_id' => $dealer_id
     ]);
     exit;
 }

@@ -1,96 +1,163 @@
 <?php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+ob_start();
+header('Content-Type: application/json; charset=UTF-8');
 
-require_once '../db.php';
-require_once '../auth.php';
+try {
+    $bootstrap = __DIR__ . '/../includes/site_bootstrap.php';
+    $helpers = __DIR__ . '/../includes/registration_helpers.php';
+    $limiter = __DIR__ . '/../includes/RateLimiter.php';
+    $cors = __DIR__ . '/../cors.php';
 
-// Handle preflight OPTIONS request for CORS
+    if (!is_file($bootstrap)) {
+        throw new RuntimeException('Missing file: api/includes/site_bootstrap.php — upload it.');
+    }
+    if (!is_file($helpers)) {
+        throw new RuntimeException('Missing file: api/includes/registration_helpers.php — upload it.');
+    }
+    if (!is_file($limiter)) {
+        throw new RuntimeException('Missing file: api/includes/RateLimiter.php — upload it.');
+    }
+
+    require_once $bootstrap;
+    require_once $helpers;
+    hr_api_bootstrap();
+    require_once $cors;
+    require_once $limiter;
+} catch (Throwable $bootstrapError) {
+    if (!function_exists('hr_json_error')) {
+        http_response_code(500);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Registration service unavailable.',
+            'error' => $bootstrapError->getMessage(),
+        ]);
+        exit;
+    }
+    hr_json_error(
+        'Registration service unavailable.',
+        500,
+        $bootstrapError->getMessage()
+    );
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(['status' => 'error', 'message' => 'Invalid request method']);
-    exit();
+    hr_json_error('Invalid request method', 405);
 }
 
-$data = json_decode(file_get_contents("php://input"), true);
-if (!$data) $data = $_POST;
+global $conn;
 
-$name = $data['name'] ?? '';
-$email = $data['email'] ?? '';
-$password = $data['password'] ?? '';
-$phone = $data['phone'] ?? '';
-$role = $data['role'] ?? 'user';
+$ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+    $ip = $_SERVER['HTTP_CF_CONNECTING_IP'];
+} elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+    $ip = trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0]);
+}
 
-if (empty($name) || empty($email) || empty($password)) {
-    echo json_encode(['status' => 'error', 'message' => 'Name, email, and password are required']);
-    exit;
+$limiter = new RateLimiter(8, 900);
+if ($limiter->isBlocked($ip . '_register')) {
+    hr_json_error('Too many registration attempts. Please try again later.');
+}
+
+$data = json_decode(file_get_contents('php://input'), true);
+if (!is_array($data)) {
+    $data = $_POST;
+}
+
+$name = trim((string) ($data['name'] ?? ''));
+$email = strtolower(trim((string) ($data['email'] ?? '')));
+$password = (string) ($data['password'] ?? '');
+$confirmPassword = (string) ($data['confirm_password'] ?? $password);
+$phone = trim((string) ($data['phone'] ?? ''));
+$role = trim((string) ($data['role'] ?? 'user'));
+$referralCode = strtoupper(trim((string) ($data['referral_code'] ?? '')));
+$vehicleType = trim((string) ($data['vehicle_type'] ?? ''));
+$vehicleCapacity = trim((string) ($data['vehicle_capacity'] ?? ''));
+$serviceArea = trim((string) ($data['service_area'] ?? ''));
+
+if ($name === '' || $email === '' || $password === '') {
+    hr_json_error('Name, email, and password are required');
+}
+
+if ($phone === '') {
+    hr_json_error('Phone number is required');
+}
+
+if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    hr_json_error('Please use a valid email address');
+}
+
+if ($password !== $confirmPassword) {
+    hr_json_error('Passwords do not match');
+}
+
+if (strlen($password) < 8) {
+    hr_json_error('Password must be at least 8 characters');
+}
+
+if (!in_array($role, ['user', 'dealer', 'driver'], true)) {
+    hr_json_error('Please select a valid account type');
+}
+
+$referrer = null;
+if ($role === 'dealer' && $referralCode !== '') {
+    $referrer = hr_find_dealer_by_referral($conn, $referralCode);
+    if (!$referrer) {
+        hr_json_error('Invalid referral code. Please check and try again.');
+    }
+}
+
+if ($role === 'driver' && ($vehicleType === '' || $vehicleCapacity === '' || $serviceArea === '')) {
+    hr_json_error('Please tell us about your moving vehicle and service area.');
 }
 
 try {
-    // Check if user exists
-    $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
-    $stmt->execute([$email]);
-    if ($stmt->rowCount() > 0) {
-        echo json_encode(['status' => 'error', 'message' => 'Email already registered']);
-        exit;
+    $exists = $conn->prepare('SELECT id FROM users WHERE email = :email LIMIT 1');
+    $exists->execute([':email' => $email]);
+    if ($exists->fetchColumn()) {
+        $limiter->record($ip . '_register');
+        hr_json_error('Email already registered');
     }
 
+    $trial = hr_fetch_trial_settings($conn);
     $token = bin2hex(random_bytes(32));
     $expiry = date('Y-m-d H:i:s', strtotime('+24 hours'));
-    $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
-    $userRole = ($role === 'dealer') ? 'dealer' : 'user';
 
-    // Insert user
-    $stmt = $conn->prepare("INSERT INTO users (name, email, password, role, phone, verification_token, token_expiry) VALUES (?, ?, ?, ?, ?, ?, ?)");
-    $stmt->execute([$name, $email, $hashedPassword, $userRole, $phone, $token, $expiry]);
-    $userId = $conn->lastInsertId();
+    $userId = hr_register_app_user($conn, [
+        'name' => $name,
+        'email' => $email,
+        'password' => $password,
+        'role' => $role,
+        'phone' => $phone,
+        'vehicle_type' => $vehicleType,
+        'vehicle_capacity' => $vehicleCapacity,
+        'service_area' => $serviceArea,
+        'verification_token' => $token,
+        'token_expiry' => $expiry,
+        'subscription_status' => ($trial['enabled'] && $role === 'dealer') ? 'active' : 'inactive',
+        'subscription_expiry' => ($trial['enabled'] && $role === 'dealer')
+            ? date('Y-m-d H:i:s', strtotime('+' . $trial['days'] . ' days'))
+            : null,
+        'referrer_id' => $referrer['id'] ?? null,
+    ]);
 
-    if ($userRole === 'dealer') {
-        $stmt = $conn->prepare("INSERT INTO dealers (user_id, subscription_status) VALUES (?, 'inactive')");
-        $stmt->execute([$userId]);
+    $emailSent = hr_send_registration_verification_email($email, $name, $token);
+
+    if ($emailSent) {
+        hr_json_success(
+            'Registration successful! Please check your email (including spam folder) to verify your account.',
+            ['user_id' => $userId]
+        );
     }
 
-    // Attempt to send verification email using SimpleSMTP
-    require_once '../../config/config.php';
-    require_once '../includes/SimpleSMTP.php';
-    $mailer = new SimpleSMTP(SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS);
-    
-    $verifyLink = SITE_URL . "/php_backend/api/auth/verify_email.php?token=" . urlencode($token);
-    $subject = "Verify Your Account - " . SITE_NAME;
-    
-    $body = "
-    <div style='font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:20px;border:1px solid #ddd;border-radius:10px;'>
-        <h2 style='color:#2c3e50;text-align:center;'>Welcome to " . SITE_NAME . ", $name!</h2>
-        <p>Please verify your email address by clicking the button below:</p>
-        <div style='text-align:center;margin:25px 0;'> 
-            <a href='$verifyLink' style='display:inline-block;background-color:#FFC107;color:#000;padding:12px 24px;text-decoration:none;border-radius:5px;font-weight:bold;'>Verify Email Address</a>
-        </div>
-        <p>Or copy this link:</p>
-        <p style='word-break:break-all;color:#007bff;'>$verifyLink</p>
-    </div>
-    ";
-    
-    if ($mailer->send($email, $subject, $body, SITE_NAME)) {
-        echo json_encode([
-            'status' => 'success',
-            'message' => 'Registration successful. Please check your email to verify your account.'
-        ]);
-    } else {
-        echo json_encode([
-            'status' => 'success', // Still success because the account was created
-            'message' => 'Registration successful, but we could not send the verification email. Please contact support.'
-        ]);
-    }
-
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['status' => 'error', 'message' => 'Server error', 'error' => $e->getMessage()]);
+    hr_json_success(
+        'Registration successful, but failed to send email. Use resend verification on the login screen.',
+        ['user_id' => $userId]
+    );
+} catch (Throwable $e) {
+    hr_json_error('Server error', 500, $e->getMessage());
 }
-?>

@@ -47,6 +47,8 @@
 	<true/>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>HouseRent uses notifications to alert you about admin messages and new listings.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>HouseRent uses your location to show nearby homes on the map and provide directions.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

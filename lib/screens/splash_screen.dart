@@ -1,5 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../widgets/app_logo.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -8,7 +13,8 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _opacityAnimation;
@@ -16,27 +22,68 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
-    
+
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack)
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 0.5,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
     _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.2, 1.0, curve: Curves.easeIn))
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.2, 1.0, curve: Curves.easeIn),
+      ),
     );
 
-    _controller.forward().then((_) {
-      // Wait a little bit after animation completes before navigating
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        if (mounted) {
-          context.go('/home');
+    _controller.forward().then((_) async {
+      await Future.delayed(const Duration(milliseconds: 1500));
+      if (!mounted) return;
+      // Keep the session alive across refreshes: any logged-in user goes
+      // straight back to their dashboard instead of the welcome/login flow.
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+      final role = prefs.getString('role') ?? '';
+      var userId = prefs.getString('user_id') ?? '';
+      if (token.isNotEmpty && userId.isEmpty) {
+        final parts = token.split('.');
+        if (parts.length == 3) {
+          try {
+            var normalized = parts[1].replaceAll('-', '+').replaceAll('_', '/');
+            final mod = normalized.length % 4;
+            if (mod == 2) normalized += '==';
+            if (mod == 3) normalized += '=';
+            final payload = jsonDecode(utf8.decode(base64.decode(normalized)));
+            final id = payload is Map ? payload['id'] : null;
+            if (id != null) {
+              userId = id.toString();
+              await prefs.setString('user_id', userId);
+            }
+          } catch (_) {}
         }
-      });
+      }
+      if (!mounted) return;
+      if (token.isNotEmpty) {
+        switch (role) {
+          case 'driver':
+            context.go('/driver-dashboard');
+            return;
+          case 'dealer':
+          case 'agent':
+          case 'company':
+            context.go('/dealer-dashboard');
+            return;
+          case 'user':
+          case 'tenant':
+            context.go('/tenant-dashboard');
+            return;
+        }
+      }
+      context.go('/welcome');
     });
   }
 
@@ -61,25 +108,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.real_estate_agent,
-                        size: 80,
-                        color: Color(0xFF5A3D31), // Brand brown
-                      ),
-                    ),
+                    const AppLogo(size: 128),
                     const SizedBox(height: 24),
                     const Text(
                       'HouseRent Africa',

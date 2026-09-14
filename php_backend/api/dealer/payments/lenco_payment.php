@@ -33,7 +33,7 @@ if (empty($user_id)) {
 $lenco = new LencoAPI();
 
 // Configuration
-$subscription_fee = 20; // e.g., ZMW 20
+$subscription_fee = 300; // Landlords: ZMW 300 after free trial
 $currency = 'ZMW';
 
 if ($action === 'initiate') {

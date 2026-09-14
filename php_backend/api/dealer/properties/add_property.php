@@ -24,6 +24,11 @@ $user = verifyToken();
 if (!$user || !isset($user['id'])) {
     json_response(['status' => 'error', 'message' => 'Unauthorized'], 401);
 }
+// Same upload/create flow for landlord (dealer), agent, and private company.
+$role = strtolower(trim((string) ($user['role'] ?? '')));
+if (!in_array($role, ['dealer', 'agent', 'company', 'admin'], true)) {
+    json_response(['status' => 'error', 'message' => 'User role not authorized'], 403);
+}
 $dealer_id = $user['id'];
 
 $rawInput = file_get_contents("php://input");
@@ -294,93 +299,254 @@ if ($action === 'create_property') {
         }
         json_response(['status' => 'error', 'message' => 'Database error: ' . $e->getMessage()]);
     }
-} elseif ($action === 'upload_property_images' || $action === 'replace_property_images') { 
-    // --- UPLOAD PROPERTY IMAGES & VIDEOS --- 
-    $property_id = $data['property_id'] ?? ($_POST['property_id'] ?? ''); 
+} elseif ($action === 'delete_property_image') {
+    // --- DELETE ONE PROPERTY IMAGE (same shape Flutter already expects) ---
+    $property_id = $data['property_id'] ?? ($_POST['property_id'] ?? '');
+    $image_id = $data['image_id'] ?? ($_POST['image_id'] ?? '');
+    if ($property_id === '' || $image_id === '') {
+        json_response(['status' => 'error', 'message' => 'Property ID and image ID are required.']);
+    }
+
+    try {
+        $verifyStmt = $conn->prepare("SELECT id FROM properties WHERE id = ? AND dealer_id = ?");
+        $verifyStmt->execute([$property_id, $dealer_id]);
+        if (!$verifyStmt->fetch()) {
+            json_response(['status' => 'error', 'message' => 'Unauthorized']);
+        }
+
+        $imgStmt = $conn->prepare(
+            "SELECT id, image_path, is_main FROM property_images WHERE id = ? AND property_id = ? LIMIT 1"
+        );
+        $imgStmt->execute([$image_id, $property_id]);
+        $image = $imgStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$image) {
+            json_response(['status' => 'error', 'message' => 'Image not found.']);
+        }
+
+        $conn->beginTransaction();
+        $conn->prepare("DELETE FROM property_images WHERE id = ? AND property_id = ?")
+            ->execute([$image_id, $property_id]);
+
+        // If we removed the cover, promote the next remaining image.
+        if ((int) ($image['is_main'] ?? 0) === 1) {
+            $next = $conn->prepare(
+                "SELECT id FROM property_images WHERE property_id = ? ORDER BY id ASC LIMIT 1"
+            );
+            $next->execute([$property_id]);
+            $nextId = $next->fetchColumn();
+            if ($nextId) {
+                $conn->prepare("UPDATE property_images SET is_main = 1 WHERE id = ? AND property_id = ?")
+                    ->execute([$nextId, $property_id]);
+            }
+        }
+        $conn->commit();
+
+        // Best-effort disk cleanup (do not fail the API if file is already gone).
+        $rel = ltrim(str_replace('\\', '/', (string) ($image['image_path'] ?? '')), '/');
+        if ($rel !== '' && strpos($rel, '..') === false) {
+            $full = rtrim($_SERVER['DOCUMENT_ROOT'] ?? '', '/\\') . '/' . $rel;
+            if (is_file($full)) {
+                @unlink($full);
+            }
+        }
+
+        json_response(['status' => 'success', 'message' => 'Image deleted successfully.']);
+    } catch (PDOException $e) {
+        if ($conn->inTransaction()) {
+            $conn->rollBack();
+        }
+        json_response(['status' => 'error', 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+} elseif ($action === 'upload_property_images' || $action === 'replace_property_images') {
+    // --- UPLOAD PROPERTY IMAGES & VIDEOS (concurrency-safe, same response shape) ---
+    @set_time_limit(180);
+    @ini_set('max_execution_time', '180');
+
+    $property_id = $data['property_id'] ?? ($_POST['property_id'] ?? '');
     $replace_existing = $action === 'replace_property_images';
-    
-    if (empty($property_id)) { 
-        json_response(['status' => 'error', 'message' => 'Property ID is required']); 
-    } 
+
+    if ($property_id === '') {
+        json_response(['status' => 'error', 'message' => 'Property ID is required']);
+    }
 
     // Verify dealer owns this property
     $verifyStmt = $conn->prepare("SELECT id FROM properties WHERE id = ? AND dealer_id = ?");
     $verifyStmt->execute([$property_id, $dealer_id]);
     if (!$verifyStmt->fetch()) {
-        json_response(['status' => 'error', 'message' => 'Unauthorized']); 
+        json_response(['status' => 'error', 'message' => 'Unauthorized']);
     }
 
-    if (!isset($_FILES['images']) || empty($_FILES['images']['name'][0])) { 
-        json_response(['status' => 'error', 'message' => 'No files provided']); 
-    } 
-
-    // Determine absolute path to the main public html assets folder
-    // This ensures it never gets lost above public_html in cPanel if relative paths mismatch
-    $documentRoot = rtrim($_SERVER['DOCUMENT_ROOT'], '/');
-    $uploadDir = $documentRoot . '/assets/images/properties/'; 
-    
-    // Fallback if DOCUMENT_ROOT fails or isn't set up correctly
-    if (!is_dir($documentRoot . '/assets/')) {
-        $uploadDir = '../../../../assets/images/properties/';
+    // Diagnose empty multipart (often post_max_size / upload_max_filesize under load).
+    $contentLength = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
+    $postMax = ini_get('post_max_size');
+    if ((!isset($_FILES['images']) || empty($_FILES['images']['name'][0])) && $contentLength > 0 && empty($_POST)) {
+        json_response([
+            'status' => 'error',
+            'message' => 'Upload too large for the server limit (post_max_size=' . $postMax
+                . '). Please upload fewer/smaller photos at a time and try again.',
+        ], 413);
     }
 
-    if (!is_dir($uploadDir)) { 
-        mkdir($uploadDir, 0755, true); 
-    } 
+    if (!isset($_FILES['images']) || empty($_FILES['images']['name'][0])) {
+        json_response(['status' => 'error', 'message' => 'No files provided. Add property photos and try again.']);
+    }
 
-    $uploadedFiles = []; 
-    // Added mp4 and mov for video support
-    $allowedTypes = ['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov']; 
+    $documentRoot = rtrim((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''), '/\\');
+    $uploadDir = $documentRoot . '/assets/images/properties/';
 
-    $is_main = 1; // Make first image main 
+    if ($documentRoot === '' || !is_dir($documentRoot . '/assets')) {
+        $uploadDir = __DIR__ . '/../../../../assets/images/properties/';
+    }
+
+    if (!is_dir($uploadDir) && !@mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
+        json_response(['status' => 'error', 'message' => 'Upload folder is not writable on the server.'], 500);
+    }
+
+    $uploadedFiles = [];
+    $skipped = [];
+    $allowedTypes = ['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov'];
+    $maxFileBytes = 12 * 1024 * 1024; // 12MB per file
+    $maxFilesPerRequest = 5; // Clients should chunk; keeps concurrent uploads stable
+
+    $names = $_FILES['images']['name'] ?? [];
+    if (!is_array($names)) {
+        // Single-file shape → normalize to array
+        $_FILES['images'] = [
+            'name' => [$_FILES['images']['name']],
+            'type' => [$_FILES['images']['type']],
+            'tmp_name' => [$_FILES['images']['tmp_name']],
+            'error' => [$_FILES['images']['error']],
+            'size' => [$_FILES['images']['size']],
+        ];
+        $names = $_FILES['images']['name'];
+    }
+
+    $fileCount = count($names);
+    if ($fileCount > $maxFilesPerRequest) {
+        json_response([
+            'status' => 'error',
+            'message' => 'Please upload at most ' . $maxFilesPerRequest
+                . ' files per request. The app will send the rest automatically.',
+        ], 422);
+    }
 
     try {
-        if ($replace_existing) {
-            $conn->prepare("DELETE FROM property_images WHERE property_id = ?")->execute([$property_id]);
+        $conn->beginTransaction();
+
+        // Lock property row so concurrent uploads don't race on is_main / replace.
+        $lock = $conn->prepare("SELECT id FROM properties WHERE id = ? AND dealer_id = ? FOR UPDATE");
+        $lock->execute([$property_id, $dealer_id]);
+        if (!$lock->fetch()) {
+            $conn->rollBack();
+            json_response(['status' => 'error', 'message' => 'Unauthorized']);
         }
 
-        $imgStmt = $conn->prepare("INSERT INTO property_images (property_id, image_path, is_main) VALUES (?, ?, ?)");
-        $vidStmt = $conn->prepare("UPDATE properties SET video_url = ? WHERE id = ?");
+        if ($replace_existing) {
+            $old = $conn->prepare("SELECT image_path FROM property_images WHERE property_id = ?");
+            $old->execute([$property_id]);
+            $oldPaths = $old->fetchAll(PDO::FETCH_COLUMN);
+            $conn->prepare("DELETE FROM property_images WHERE property_id = ?")->execute([$property_id]);
+            foreach ($oldPaths as $rel) {
+                $rel = ltrim(str_replace('\\', '/', (string) $rel), '/');
+                if ($rel === '' || strpos($rel, '..') !== false) {
+                    continue;
+                }
+                $full = $documentRoot . '/' . $rel;
+                if (is_file($full)) {
+                    @unlink($full);
+                }
+            }
+        }
 
-        foreach ($_FILES['images']['tmp_name'] as $key => $tmp_name) { 
-            if ($_FILES['images']['error'][$key] === UPLOAD_ERR_OK) { 
-                $fileName = basename($_FILES['images']['name'][$key]); 
-                $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION)); 
-    
-                if (in_array($fileExt, $allowedTypes)) { 
-                    $newName = uniqid('prop_') . '_' . time() . '.' . $fileExt; 
-                    $targetPath = $uploadDir . $newName; 
-                    
-                    if (move_uploaded_file($tmp_name, $targetPath)) { 
-                        chmod($targetPath, 0644); // Ensure file is readable by the web server
-                        $dbPath = 'assets/images/properties/' . $newName; 
-                        
-                        if ($fileExt === 'mp4' || $fileExt === 'mov') {
-                            $vidStmt->execute([$dbPath, $property_id]);
-                        } else {
-                            $imgStmt->execute([$property_id, $dbPath, $is_main]);
-                            $is_main = 0; // Only first one is main 
-                        }
-                        
-                        $fullUrl = 'https://houseforrent.site/' . ltrim($dbPath, '/'); 
-                        $uploadedFiles[] = $fullUrl; 
-                    } 
-                } 
-            } 
-        } 
-    
-        if (count($uploadedFiles) > 0) { 
-            json_response([ 
-                'status' => 'success', 
-                'message' => count($uploadedFiles) . ' files uploaded successfully', 
-                'urls' => $uploadedFiles 
-            ]); 
-        } else { 
-            json_response(['status' => 'error', 'message' => 'Failed to upload any valid files']); 
-        } 
+        $hasMainStmt = $conn->prepare(
+            "SELECT COUNT(*) FROM property_images WHERE property_id = ? AND is_main = 1"
+        );
+        $hasMainStmt->execute([$property_id]);
+        $hasMain = ((int) $hasMainStmt->fetchColumn()) > 0;
+        $is_main = $hasMain ? 0 : 1;
+
+        $imgStmt = $conn->prepare(
+            "INSERT INTO property_images (property_id, image_path, is_main) VALUES (?, ?, ?)"
+        );
+        $vidStmt = $conn->prepare("UPDATE properties SET video_url = ? WHERE id = ? AND dealer_id = ?");
+
+        foreach ($_FILES['images']['tmp_name'] as $key => $tmp_name) {
+            $err = (int) ($_FILES['images']['error'][$key] ?? UPLOAD_ERR_NO_FILE);
+            $origName = (string) ($_FILES['images']['name'][$key] ?? ('file_' . $key));
+            $size = (int) ($_FILES['images']['size'][$key] ?? 0);
+
+            if ($err !== UPLOAD_ERR_OK) {
+                $skipped[] = basename($origName) . ' (upload error ' . $err . ')';
+                continue;
+            }
+            if ($size <= 0 || $size > $maxFileBytes) {
+                $skipped[] = basename($origName) . ' (max 12MB)';
+                continue;
+            }
+            if (!is_uploaded_file($tmp_name)) {
+                $skipped[] = basename($origName) . ' (invalid upload)';
+                continue;
+            }
+
+            $fileExt = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+            if (!in_array($fileExt, $allowedTypes, true)) {
+                $skipped[] = basename($origName) . ' (unsupported type)';
+                continue;
+            }
+
+            $newName = 'prop_' . $property_id . '_' . bin2hex(random_bytes(8)) . '_' . time() . '.' . $fileExt;
+            $targetPath = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR . $newName;
+
+            if (!@move_uploaded_file($tmp_name, $targetPath)) {
+                $skipped[] = basename($origName) . ' (could not save)';
+                continue;
+            }
+            @chmod($targetPath, 0644);
+            $dbPath = 'assets/images/properties/' . $newName;
+
+            if ($fileExt === 'mp4' || $fileExt === 'mov') {
+                $vidStmt->execute([$dbPath, $property_id, $dealer_id]);
+            } else {
+                $imgStmt->execute([$property_id, $dbPath, $is_main]);
+                $is_main = 0;
+            }
+
+            $uploadedFiles[] = 'https://houseforrent.site/' . ltrim($dbPath, '/');
+        }
+
+        $conn->commit();
+
+        if (count($uploadedFiles) > 0) {
+            $msg = count($uploadedFiles) . ' files uploaded successfully';
+            if (!empty($skipped)) {
+                $msg .= '. Skipped: ' . implode(', ', $skipped);
+            }
+            json_response([
+                'status' => 'success',
+                'message' => $msg,
+                'urls' => $uploadedFiles,
+            ]);
+        }
+
+        json_response([
+            'status' => 'error',
+            'message' => 'Failed to upload any valid files'
+                . (!empty($skipped) ? (': ' . implode(', ', $skipped)) : '')
+                . '. Use JPG/PNG/WEBP (photos) or MP4/MOV (video), max 12MB each.',
+        ]);
     } catch (PDOException $e) {
+        if ($conn->inTransaction()) {
+            $conn->rollBack();
+        }
         json_response(['status' => 'error', 'message' => 'Database error during upload: ' . $e->getMessage()]);
+    } catch (Throwable $e) {
+        if ($conn->inTransaction()) {
+            $conn->rollBack();
+        }
+        error_log('Property upload error: ' . $e->getMessage());
+        json_response(['status' => 'error', 'message' => 'Upload failed temporarily. Please try again.'], 500);
     }
-} else { 
-    json_response(['status' => 'error', 'message' => 'Invalid action']); 
+} else {
+    json_response(['status' => 'error', 'message' => 'Invalid action']);
 }
+

@@ -1,13 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 
 import 'api_service.dart';
+import 'moving_trip_notifier.dart';
 
 const String _backgroundTaskName = 'houserent.notifications.poll';
 const String _backgroundTaskUniqueName = 'houserent_notifications_poll_unique';
@@ -25,7 +26,9 @@ void notificationBackgroundDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     WidgetsFlutterBinding.ensureInitialized();
     await NotificationService.initialize(fromBackground: true);
-    await NotificationService.checkAndShowNewNotifications(fromBackground: true);
+    await NotificationService.checkAndShowNewNotifications(
+      fromBackground: true,
+    );
     return Future.value(true);
   });
 }
@@ -42,11 +45,12 @@ class NotificationService {
     if (_isInitialized && !fromBackground) return;
 
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosInit = DarwinInitializationSettings();
-    const settings = InitializationSettings(
-      android: androidInit,
-      iOS: iosInit,
+    const iosInit = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
     );
+    const settings = InitializationSettings(android: androidInit, iOS: iosInit);
 
     await _localNotifications.initialize(settings);
     await _createAndroidChannel();
@@ -55,12 +59,23 @@ class NotificationService {
       await _requestPermissions();
       await _initializeWorkmanager();
       await checkAndShowNewNotifications(seedOnlyIfFirstRun: true);
+      await MovingTripNotifier.resumeWatchIfNeeded();
+      await startForegroundPolling(interval: const Duration(seconds: 20));
+      _isInitialized = true;
+    } else {
+      // Background isolate still needs the plugin + channels ready.
       _isInitialized = true;
     }
   }
 
+  /// Safe to call before showing a trip/local alert.
+  static Future<void> ensureReady() async {
+    if (_isInitialized) return;
+    await initialize();
+  }
+
   static Future<void> startForegroundPolling({
-    Duration interval = const Duration(seconds: 30),
+    Duration interval = const Duration(seconds: 20),
   }) async {
     if (_foregroundTimer != null) return;
 
@@ -75,8 +90,117 @@ class NotificationService {
     _foregroundTimer = null;
   }
 
+  // --- NEW: Check for New Listings for Paid Tenants ---
+  static Future<void> _checkForNewListings(SharedPreferences prefs) async {
+    try {
+      // 1. Verify user is a tenant and logged in
+      final role = prefs.getString('role') ?? '';
+      final token = prefs.getString('token') ?? '';
+      final userId = prefs.getString('user_id') ?? '';
+
+      if (token.isEmpty || userId.isEmpty || role == 'dealer') return;
+
+      // 2. Check if they are a paid tenant
+      final paymentCheckResponse = await http.post(
+        Uri.parse('https://houseforrent.site/api/tenant_contact_payment.php'),
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: {'action': 'get_status', 'user_id': userId},
+      );
+
+      if (paymentCheckResponse.statusCode != 200) return;
+
+      final paymentData = json.decode(paymentCheckResponse.body);
+      if (paymentData['status'] != 'success' ||
+          paymentData['has_paid'] != true) {
+        return; // Not a paid tenant, exit
+      }
+
+      // 3. Fetch latest properties
+      final propertiesResponse = await http.get(
+        Uri.parse(
+          'https://houseforrent.site/php_backend/api/properties/index.php?limit=5',
+        ),
+      );
+
+      if (propertiesResponse.statusCode != 200) return;
+
+      final decodedProps = json.decode(propertiesResponse.body);
+      final rawList = (decodedProps is Map && decodedProps['data'] != null)
+          ? decodedProps['data']
+          : decodedProps;
+      if (rawList is! List || rawList.isEmpty) return;
+
+      // Sort to ensure newest is first
+      rawList.sort((a, b) {
+        final aDate =
+            DateTime.tryParse(
+              (a['created_at'] ?? a['date_added'] ?? '').toString(),
+            ) ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+        final bDate =
+            DateTime.tryParse(
+              (b['created_at'] ?? b['date_added'] ?? '').toString(),
+            ) ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+        return bDate.compareTo(aDate);
+      });
+
+      final latestProperty = rawList.first;
+      final propertyId =
+          latestProperty['id']?.toString() ??
+          latestProperty['property_id']?.toString() ??
+          '';
+      if (propertyId.isEmpty) return;
+
+      final lastSeenPropertyId = prefs.getString('last_seen_property_id') ?? '';
+
+      // If we have a new property that we haven't notified about yet
+      if (propertyId != lastSeenPropertyId) {
+        await prefs.setString('last_seen_property_id', propertyId);
+
+        // Don't notify if it's the very first time running the check (prevents spam on fresh install)
+        if (lastSeenPropertyId.isEmpty) return;
+
+        final title =
+            latestProperty['title']?.toString() ?? 'New Property Listed';
+        final location =
+            latestProperty['city']?.toString() ??
+            latestProperty['location']?.toString() ??
+            '';
+        final price = latestProperty['price']?.toString() ?? '';
+        final currency = latestProperty['currency']?.toString() ?? 'ZMW';
+
+        String body =
+            'A new property is available in $location for $currency $price.';
+
+        await _showLocalNotification({
+          'id': '999997',
+          'title': '🔥 Matchmaker: New Listing!',
+          'body': '$title\n$body',
+          'payload': 'property_$propertyId',
+        });
+      }
+    } catch (_) {}
+  }
+
   static Future<void> forceCheckNow() async {
     await checkAndShowNewNotifications();
+  }
+
+  static Future<void> showPushNotification({
+    required String id,
+    required String title,
+    required String body,
+    Map<String, dynamic> data = const {},
+  }) async {
+    await ensureReady();
+    await _showLocalNotification({
+      'id': id,
+      'title': title,
+      'body': body,
+      'message': body, // some extractors only look at message
+      ...data,
+    });
   }
 
   static Future<void> checkAndShowNewNotifications({
@@ -85,6 +209,9 @@ class NotificationService {
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      await _checkForNewListings(prefs);
+      // Optimized: only hits API when an active move is watched.
+      await MovingTripNotifier.pollWatchedBooking();
       final token = prefs.getString('token') ?? '';
       final notifications = <dynamic>[];
       final publicNotifications = <dynamic>[];
@@ -100,8 +227,9 @@ class NotificationService {
 
       // Public admin notifications (no login required)
       try {
-        publicNotifications
-            .addAll(await ApiService.fetchPublicAdminNotifications());
+        publicNotifications.addAll(
+          await ApiService.fetchPublicAdminNotifications(),
+        );
         notifications.addAll(publicNotifications);
       } catch (_) {
         // If this also fails, we'll simply skip this cycle.
@@ -161,11 +289,7 @@ class NotificationService {
 
       final updated = {...seenIds, ...currentIds};
       await _storeSeenIds(prefs, updated);
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Notification sync failed (${fromBackground ? "bg" : "fg"}): $e');
-      }
-    }
+    } catch (_) {}
   }
 
   static Future<void> _initializeWorkmanager() async {
@@ -181,9 +305,7 @@ class NotificationService {
         _backgroundTaskName,
         frequency: const Duration(minutes: 15),
         initialDelay: const Duration(minutes: 2),
-        constraints: Constraints(
-          networkType: NetworkType.connected,
-        ),
+        constraints: Constraints(networkType: NetworkType.connected),
         existingWorkPolicy: ExistingWorkPolicy.replace,
       );
 
@@ -193,17 +315,11 @@ class NotificationService {
         _quickBackgroundTaskUniqueName,
         _quickBackgroundTaskName,
         initialDelay: const Duration(minutes: 1),
-        constraints: Constraints(
-          networkType: NetworkType.connected,
-        ),
+        constraints: Constraints(networkType: NetworkType.connected),
         existingWorkPolicy: ExistingWorkPolicy.replace,
       );
       _workManagerInitialized = true;
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Workmanager setup failed: $e');
-      }
-    }
+    } catch (_) {}
   }
 
   static Future<void> scheduleQuickBackgroundCheck() async {
@@ -213,9 +329,7 @@ class NotificationService {
         _quickBackgroundTaskUniqueName,
         _quickBackgroundTaskName,
         initialDelay: const Duration(minutes: 1),
-        constraints: Constraints(
-          networkType: NetworkType.connected,
-        ),
+        constraints: Constraints(networkType: NetworkType.connected),
         existingWorkPolicy: ExistingWorkPolicy.replace,
       );
     } catch (_) {}
@@ -224,48 +338,76 @@ class NotificationService {
   static Future<void> _requestPermissions() async {
     await _localNotifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.requestNotificationsPermission();
 
     await _localNotifications
         .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>()
+          IOSFlutterLocalNotificationsPlugin
+        >()
         ?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
   static Future<void> _createAndroidChannel() async {
-    const channel = AndroidNotificationChannel(
-      'houserent_general_notifications',
-      'HouseRent Notifications',
-      description: 'Admin and listing alerts',
-      importance: Importance.max,
-    );
-
-    await _localNotifications
+    final android = _localNotifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    if (android == null) return;
+
+    await android.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'houserent_general_notifications',
+        'HouseRent Notifications',
+        description: 'Admin and listing alerts',
+        importance: Importance.max,
+      ),
+    );
+    await android.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'houserent_trip_alerts',
+        'HouseRent Shifts',
+        description: 'Trip started and arrival alerts',
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
+      ),
+    );
   }
 
   static Future<void> _showLocalNotification(dynamic notif) async {
     if (notif is! Map) return;
-    final n = Map<String, dynamic>.from(notif as Map);
+    final n = Map<String, dynamic>.from(notif);
     final idText = _extractNotificationId(n);
-    final notifId = int.tryParse(idText) ?? idText.hashCode;
+    if (idText.isEmpty) return;
+    // Keep id in Android's 32-bit range.
+    final notifId = idText.hashCode & 0x7fffffff;
 
     final title = _extractTitle(n);
     final body = _extractBody(n);
     if (body.isEmpty) return;
 
-    const details = NotificationDetails(
+    final isTrip = (n['type'] ?? '').toString() == 'moving';
+    final channelId =
+        isTrip ? 'houserent_trip_alerts' : 'houserent_general_notifications';
+    final channelName = isTrip ? 'HouseRent Shifts' : 'HouseRent Notifications';
+    final channelDesc =
+        isTrip ? 'Trip started and arrival alerts' : 'Admin and listing alerts';
+
+    final details = NotificationDetails(
       android: AndroidNotificationDetails(
-        'houserent_general_notifications',
-        'HouseRent Notifications',
-        channelDescription: 'Admin and listing alerts',
+        channelId,
+        channelName,
+        channelDescription: channelDesc,
         importance: Importance.max,
         priority: Priority.high,
+        playSound: true,
+        enableVibration: true,
+        category: isTrip ? AndroidNotificationCategory.status : null,
+        styleInformation: BigTextStyleInformation(body, contentTitle: title),
       ),
-      iOS: DarwinNotificationDetails(
+      iOS: const DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
@@ -274,10 +416,14 @@ class NotificationService {
 
     await _localNotifications.show(
       notifId,
-      title,
+      title.isEmpty ? 'HouseRent Africa' : title,
       body,
       details,
-      payload: jsonEncode({'id': idText}),
+      payload: jsonEncode({
+        'id': idText,
+        'type': n['type'],
+        'booking_id': n['booking_id'],
+      }),
     );
   }
 
@@ -286,17 +432,12 @@ class NotificationService {
     if (rawTitle.isNotEmpty) return rawTitle;
     if (_isUploadNotification(n)) return 'New upload available';
     if (_isNewListingNotification(n)) return 'New listing available';
+    if (_isHouseHuntNotification(n)) return 'New House Request';
     return 'New admin message';
   }
 
   static String _extractBody(Map<String, dynamic> n) {
-    const candidateKeys = [
-      'message',
-      'body',
-      'description',
-      'content',
-      'text',
-    ];
+    const candidateKeys = ['message', 'body', 'description', 'content', 'text'];
     for (final key in candidateKeys) {
       final value = (n[key] ?? '').toString().trim();
       if (value.isNotEmpty) return value;
@@ -342,6 +483,24 @@ class NotificationService {
         joined.contains('new listing');
   }
 
+  static bool _isHouseHuntNotification(Map<String, dynamic> n) {
+    final joined = [
+      n['type'],
+      n['notification_type'],
+      n['category'],
+      n['title'],
+      n['message'],
+      n['body'],
+    ].map((e) => (e ?? '').toString().toLowerCase()).join(' ');
+
+    return joined.contains('tenant request') ||
+        joined.contains('house hunt') ||
+        joined.contains('house_hunt') ||
+        joined.contains('house request') ||
+        joined.contains('new request') ||
+        joined.contains('new reply');
+  }
+
   static bool _isUploadNotification(Map<String, dynamic> n) {
     final joined = [
       n['type'],
@@ -382,13 +541,15 @@ class NotificationService {
     return _isAdminMessageNotification(map) ||
         _isUploadNotification(map) ||
         _isNewListingNotification(map) ||
+        _isHouseHuntNotification(map) ||
         _isDbNotification(map) ||
         _isGenericMessageNotification(map);
   }
 
   static bool _isDbNotification(Map<String, dynamic> n) {
     final hasContent = _extractBody(n).isNotEmpty;
-    final hasDbShape = n.containsKey('target_role') ||
+    final hasDbShape =
+        n.containsKey('target_role') ||
         n.containsKey('created_by') ||
         n.containsKey('notification_id');
     return hasContent && hasDbShape;
@@ -398,7 +559,7 @@ class NotificationService {
     final hasId = _extractNotificationId(n).isNotEmpty;
     final hasTitleOrBody =
         (n['title'] ?? '').toString().trim().isNotEmpty ||
-            _extractBody(n).isNotEmpty;
+        _extractBody(n).isNotEmpty;
     return hasId && hasTitleOrBody;
   }
 
@@ -454,7 +615,8 @@ class NotificationService {
 
   static Set<String> _readClearedPublicIds(SharedPreferences prefs) {
     final list =
-        prefs.getStringList(_clearedPublicNotificationIdsKey) ?? const <String>[];
+        prefs.getStringList(_clearedPublicNotificationIdsKey) ??
+        const <String>[];
     return list.map((e) => e.trim()).where((e) => e.isNotEmpty).toSet();
   }
 
@@ -469,7 +631,8 @@ class NotificationService {
     final prefs = await SharedPreferences.getInstance();
     final current = _readClearedPublicIds(prefs);
 
-    final source = notifications ?? await ApiService.fetchPublicAdminNotifications();
+    final source =
+        notifications ?? await ApiService.fetchPublicAdminNotifications();
     final ids = <String>{};
     for (final item in source) {
       final id = _extractNotificationId(item);

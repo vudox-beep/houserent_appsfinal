@@ -18,12 +18,16 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
   String _selectedCategory = 'All';
   final List<Map<String, dynamic>> _categories = [
     {'name': 'All', 'icon': Icons.apps, 'label': 'All'},
-    {'name': 'Salon & Beauty', 'icon': Icons.face_retouching_natural, 'label': 'Beauty'},
+    {
+      'name': 'Salon & Beauty',
+      'icon': Icons.face_retouching_natural,
+      'label': 'Beauty',
+    },
     {'name': 'Gadgets', 'icon': Icons.smartphone, 'label': 'Gadgets'},
     {'name': 'Repairs', 'icon': Icons.home_repair_service, 'label': 'Repairs'},
     {'name': 'Other Services', 'icon': Icons.handyman, 'label': 'Other'},
   ];
-  
+
   int _publicNotifBadgeCount = 0;
   int _houseHuntBadgeCount = 0;
   final String _publicNotifBadgeCountKey = 'public_notif_badge_count';
@@ -44,7 +48,7 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
     final role = prefs.getString('role');
-    
+
     if (token != null && token.isNotEmpty) {
       if (mounted) {
         setState(() {
@@ -82,9 +86,14 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFFC107),
               foregroundColor: Colors.black87,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
-            child: const Text('Login', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Login',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -108,7 +117,9 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
       final zedBineTypes = ['salon', 'gadget', 'mechanic', 'other_service'];
 
       final filtered = properties.where((p) {
-        final type = (p['property_type'] ?? p['type'] ?? '').toString().toLowerCase();
+        final type = (p['property_type'] ?? p['type'] ?? '')
+            .toString()
+            .toLowerCase();
         return zedBineTypes.contains(type);
       }).toList();
 
@@ -121,22 +132,28 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load services: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to load services: $e')));
       }
     }
   }
 
   List<dynamic> get _filteredServices {
     if (_selectedCategory == 'All') return _services;
-    
+
     return _services.where((s) {
-      final rawType = (s['property_type'] ?? s['type'] ?? '').toString().toLowerCase();
-      if (_selectedCategory == 'Salon & Beauty' && rawType == 'salon') return true;
+      final rawType = (s['property_type'] ?? s['type'] ?? '')
+          .toString()
+          .toLowerCase();
+      if (_selectedCategory == 'Salon & Beauty' && rawType == 'salon')
+        return true;
       if (_selectedCategory == 'Gadgets' && rawType == 'gadget') return true;
-      if (_selectedCategory == 'Repairs' && (rawType == 'mechanic' || rawType == 'gadget')) return true; // Show gadgets under repairs if they are related
-      if (_selectedCategory == 'Other Services' && rawType == 'other_service') return true;
+      if (_selectedCategory == 'Repairs' &&
+          (rawType == 'mechanic' || rawType == 'gadget'))
+        return true; // Show gadgets under repairs if they are related
+      if (_selectedCategory == 'Other Services' && rawType == 'other_service')
+        return true;
       return false;
     }).toList();
   }
@@ -146,7 +163,10 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
     list.sort((a, b) {
       DateTime? parseDate(dynamic p) {
         if (p is! Map) return null;
-        final raw = (p['created_at'] ?? p['date_added'] ?? p['updated_at'] ?? '').toString().trim();
+        final raw =
+            (p['created_at'] ?? p['date_added'] ?? p['updated_at'] ?? '')
+                .toString()
+                .trim();
         if (raw.isEmpty) return null;
         return DateTime.tryParse(raw);
       }
@@ -174,8 +194,11 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
       context.go('/home');
     } else if (index == 1) {
       if (_isLoggedIn) {
-        if (_userRole == 'tenant' || _userRole == 'user' || _userRole.isEmpty) { 
-          context.go('/tenant-dashboard', extra: {'tab': 4}); // Use standard tab routing
+        if (_userRole == 'tenant' || _userRole == 'user' || _userRole.isEmpty) {
+          context.go(
+            '/tenant-dashboard',
+            extra: {'tab': 4},
+          ); // Use standard tab routing
         } else if (_userRole == 'dealer') {
           context.go('/dealer-dashboard');
         }
@@ -197,9 +220,9 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
     } else if (index == 4) {
       if (_isLoggedIn) {
         if (_userRole == 'dealer') {
-          context.go('/dealer-dashboard'); 
+          context.go('/dealer-dashboard');
         } else {
-          context.go('/tenant-dashboard', extra: {'tab': 3}); 
+          context.go('/tenant-dashboard', extra: {'tab': 3});
         }
       } else {
         context.go('/login');
@@ -207,18 +230,16 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
     }
   }
 
-  Widget _buildNotificationIcon({
-    required bool active,
-    Color? iconColor,
-  }) {
+  Widget _buildNotificationIcon({required bool active, Color? iconColor}) {
     final icon = Icon(
       active ? Icons.notifications : Icons.notifications_none,
       color: iconColor,
     );
     if (_publicNotifBadgeCount <= 0) return icon;
 
-    final badgeText =
-        _publicNotifBadgeCount > 99 ? '99+' : _publicNotifBadgeCount.toString();
+    final badgeText = _publicNotifBadgeCount > 99
+        ? '99+'
+        : _publicNotifBadgeCount.toString();
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -248,18 +269,16 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
     );
   }
 
-  Widget _buildHouseHuntIcon({
-    required bool active,
-    Color? iconColor,
-  }) {
+  Widget _buildHouseHuntIcon({required bool active, Color? iconColor}) {
     final icon = Icon(
       active ? Icons.campaign : Icons.campaign_outlined,
       color: iconColor,
     );
     if (_houseHuntBadgeCount <= 0) return icon;
 
-    final badgeText =
-        _houseHuntBadgeCount > 99 ? '99+' : _houseHuntBadgeCount.toString();
+    final badgeText = _houseHuntBadgeCount > 99
+        ? '99+'
+        : _houseHuntBadgeCount.toString();
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -292,14 +311,21 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
   @override
   Widget build(BuildContext context) {
     final displayServices = _filteredServices;
-    final featuredServices = displayServices.where((p) => p['is_featured']?.toString() == '1').toList();
+    final featuredServices = displayServices
+        .where((p) => p['is_featured']?.toString() == '1')
+        .toList();
     final latestServices = _latestServices();
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Zed Bine', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF1E293B), // Match banner dark elegant gradient
+        title: const Text(
+          'Zed Bine',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: const Color(
+          0xFF1E293B,
+        ), // Match banner dark elegant gradient
         foregroundColor: Colors.white,
         elevation: 0,
       ),
@@ -313,10 +339,18 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
                     children: [
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.fromLTRB(16.0, 32.0, 16.0, 72.0), // Increased bottom padding to make room for overlapping category container
+                        padding: const EdgeInsets.fromLTRB(
+                          16.0,
+                          32.0,
+                          16.0,
+                          72.0,
+                        ), // Increased bottom padding to make room for overlapping category container
                         decoration: const BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [Color(0xFF1E293B), Color(0xFF0F172A)], // Dark elegant gradient
+                            colors: [
+                              Color(0xFF1E293B),
+                              Color(0xFF0F172A),
+                            ], // Dark elegant gradient
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
@@ -341,16 +375,29 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
                                   ),
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFFFC107).withOpacity(0.2),
+                                    color: const Color(
+                                      0xFFFFC107,
+                                    ).withOpacity(0.2),
                                     borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(color: const Color(0xFFFFC107).withOpacity(0.5)),
+                                    border: Border.all(
+                                      color: const Color(
+                                        0xFFFFC107,
+                                      ).withOpacity(0.5),
+                                    ),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: const [
-                                      Icon(Icons.star, size: 14, color: Color(0xFFFFC107)),
+                                      Icon(
+                                        Icons.star,
+                                        size: 14,
+                                        color: Color(0xFFFFC107),
+                                      ),
                                       SizedBox(width: 4),
                                       Text(
                                         'PRO',
@@ -433,11 +480,14 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
                     ],
                   ),
                 ),
-                
+
                 // Categories Grid (Replaces Slider for a more marketplace feel)
                 SliverToBoxAdapter(
                   child: Transform.translate(
-                    offset: const Offset(0, -32), // Pull it up to overlap the banner more
+                    offset: const Offset(
+                      0,
+                      -32,
+                    ), // Pull it up to overlap the banner more
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: Container(
@@ -470,11 +520,15 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
                               physics: const BouncingScrollPhysics(),
                               child: Row(
                                 children: _categories.map((cat) {
-                                  final categoryName = (cat['name'] ?? '').toString();
-                                  final label = (cat['label'] ?? cat['name'] ?? '').toString();
+                                  final categoryName = (cat['name'] ?? '')
+                                      .toString();
+                                  final label =
+                                      (cat['label'] ?? cat['name'] ?? '')
+                                          .toString();
                                   final icon = cat['icon'] as IconData;
-                                  final isSelected = _selectedCategory == categoryName;
-                                  
+                                  final isSelected =
+                                      _selectedCategory == categoryName;
+
                                   return GestureDetector(
                                     onTap: () {
                                       setState(() {
@@ -482,28 +536,39 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
                                       });
                                     },
                                     child: Padding(
-                                      padding: const EdgeInsets.only(right: 20.0),
+                                      padding: const EdgeInsets.only(
+                                        right: 20.0,
+                                      ),
                                       child: Column(
                                         children: [
                                           Container(
                                             width: 60,
                                             height: 60,
                                             decoration: BoxDecoration(
-                                              color: isSelected 
-                                                  ? const Color(0xFFFFC107) 
+                                              color: isSelected
+                                                  ? const Color(0xFFFFC107)
                                                   : Colors.grey.shade100,
                                               shape: BoxShape.circle,
-                                              boxShadow: isSelected ? [
-                                                BoxShadow(
-                                                  color: const Color(0xFFFFC107).withOpacity(0.4),
-                                                  blurRadius: 8,
-                                                  offset: const Offset(0, 4),
-                                                )
-                                              ] : null,
+                                              boxShadow: isSelected
+                                                  ? [
+                                                      BoxShadow(
+                                                        color: const Color(
+                                                          0xFFFFC107,
+                                                        ).withOpacity(0.4),
+                                                        blurRadius: 8,
+                                                        offset: const Offset(
+                                                          0,
+                                                          4,
+                                                        ),
+                                                      ),
+                                                    ]
+                                                  : null,
                                             ),
                                             child: Icon(
                                               icon,
-                                              color: isSelected ? Colors.white : Colors.grey.shade600,
+                                              color: isSelected
+                                                  ? Colors.white
+                                                  : Colors.grey.shade600,
                                               size: 26,
                                             ),
                                           ),
@@ -515,8 +580,12 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
                                               textAlign: TextAlign.center,
                                               style: TextStyle(
                                                 fontSize: 12,
-                                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                                color: isSelected ? const Color(0xFF1E293B) : Colors.grey.shade600,
+                                                fontWeight: isSelected
+                                                    ? FontWeight.bold
+                                                    : FontWeight.w500,
+                                                color: isSelected
+                                                    ? const Color(0xFF1E293B)
+                                                    : Colors.grey.shade600,
                                               ),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
@@ -546,11 +615,19 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.handyman, size: 80, color: Colors.grey.shade300),
+                            Icon(
+                              Icons.handyman,
+                              size: 80,
+                              color: Colors.grey.shade300,
+                            ),
                             const SizedBox(height: 16),
                             Text(
                               'No services found.',
-                              style: TextStyle(fontSize: 18, color: Colors.grey.shade600, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.grey.shade600,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             const SizedBox(height: 8),
                             Text(
@@ -567,7 +644,10 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
                   if (featuredServices.isNotEmpty)
                     SliverToBoxAdapter(
                       child: Transform.translate(
-                        offset: const Offset(0, -16), // Adjust to maintain spacing since we pulled the categories up
+                        offset: const Offset(
+                          0,
+                          -16,
+                        ), // Adjust to maintain spacing since we pulled the categories up
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
                           child: Column(
@@ -575,22 +655,40 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
                             children: [
                               const Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 16.0),
-                                child: Text('Featured Services', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                                child: Text(
+                                  'Featured Services',
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
                               const SizedBox(height: 16),
                               SizedBox(
                                 height: 310,
                                 child: ListView.builder(
                                   scrollDirection: Axis.horizontal,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16.0,
+                                  ),
                                   itemCount: featuredServices.length,
                                   itemBuilder: (context, index) {
                                     return Container(
-                                      width: MediaQuery.of(context).size.width * 0.75 > 320 
-                                          ? 320 
-                                          : MediaQuery.of(context).size.width * 0.75,
-                                      margin: const EdgeInsets.only(right: 16.0, bottom: 8.0),
-                                      child: PropertyCard(property: featuredServices[index], isFeatured: true),
+                                      width:
+                                          MediaQuery.of(context).size.width *
+                                                  0.75 >
+                                              320
+                                          ? 320
+                                          : MediaQuery.of(context).size.width *
+                                                0.75,
+                                      margin: const EdgeInsets.only(
+                                        right: 16.0,
+                                        bottom: 8.0,
+                                      ),
+                                      child: PropertyCard(
+                                        property: featuredServices[index],
+                                        isFeatured: true,
+                                      ),
                                     );
                                   },
                                 ),
@@ -605,7 +703,10 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
                   if (latestServices.isNotEmpty)
                     SliverToBoxAdapter(
                       child: Transform.translate(
-                        offset: const Offset(0, -16), // Adjust to maintain spacing since we pulled the categories up
+                        offset: const Offset(
+                          0,
+                          -16,
+                        ), // Adjust to maintain spacing since we pulled the categories up
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 0.0),
                           child: Column(
@@ -613,22 +714,41 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
                             children: [
                               const Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 16.0),
-                                child: Text('All Services', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                                child: Text(
+                                  'All Services',
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
                               const SizedBox(height: 16),
                               SizedBox(
                                 height: 310,
                                 child: ListView.builder(
                                   scrollDirection: Axis.horizontal,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16.0,
+                                  ),
                                   itemCount: latestServices.length,
                                   itemBuilder: (context, index) {
                                     return Container(
-                                      width: MediaQuery.of(context).size.width * 0.75 > 320 
-                                          ? 320 
-                                          : MediaQuery.of(context).size.width * 0.75,
-                                      margin: const EdgeInsets.only(right: 16.0, bottom: 8.0),
-                                      child: PropertyCard(property: latestServices[index], isFeatured: false, showNewBadge: true),
+                                      width:
+                                          MediaQuery.of(context).size.width *
+                                                  0.75 >
+                                              320
+                                          ? 320
+                                          : MediaQuery.of(context).size.width *
+                                                0.75,
+                                      margin: const EdgeInsets.only(
+                                        right: 16.0,
+                                        bottom: 8.0,
+                                      ),
+                                      child: PropertyCard(
+                                        property: latestServices[index],
+                                        isFeatured: false,
+                                        showNewBadge: true,
+                                      ),
                                     );
                                   },
                                 ),
@@ -643,10 +763,7 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
             ),
       bottomNavigationBar: BottomNavigationBar(
         items: <BottomNavigationBarItem>[
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
+          const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           const BottomNavigationBarItem(
             icon: Icon(Icons.favorite_border),
             activeIcon: Icon(Icons.favorite),
@@ -655,7 +772,7 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
           BottomNavigationBarItem(
             icon: _buildHouseHuntIcon(active: false),
             activeIcon: _buildHouseHuntIcon(active: true),
-            label: 'House Hunt',
+            label: 'House Request',
           ),
           BottomNavigationBarItem(
             icon: _buildNotificationIcon(active: false),
@@ -668,8 +785,10 @@ class _ZedBineScreenState extends State<ZedBineScreen> {
             label: 'Profile',
           ),
         ],
-        currentIndex: 0, // Not explicitly selecting a tab since we are in a sub-page, but defaulting to 0
-        selectedItemColor: Colors.grey, // Grey out since we are not technically on any of these main tabs
+        currentIndex:
+            0, // Not explicitly selecting a tab since we are in a sub-page, but defaulting to 0
+        selectedItemColor: Colors
+            .grey, // Grey out since we are not technically on any of these main tabs
         unselectedItemColor: Colors.grey,
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,

@@ -272,6 +272,7 @@ try {
         'plan_name' => $plan_name,
         'subscription_status' => $sub_status, 
         'subscription_expiry' => $expiry, 
+        'subscription_fee' => 300,
         'identity_verified' => $user['identity_verified'], 
         'verification_document' => $user['verification_doc'], 
         'identity_status' => $identity_status, 

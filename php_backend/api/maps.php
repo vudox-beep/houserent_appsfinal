@@ -4,9 +4,17 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST'); 
 header('Access-Control-Allow-Headers: Content-Type'); 
 
-require_once '../config/config.php'; 
+require_once '../config/config.php';
 
-// Fallback in case GOOGLE_MAPS_API_KEY is not defined in config.php
+// Reuse the website key from house/config/config.php when php_backend config has none.
+if (! defined('GOOGLE_MAPS_API_KEY')) {
+    $houseConfig = dirname(__DIR__, 2).'/house/config/config.php';
+    if (is_file($houseConfig)) {
+        require_once $houseConfig;
+    }
+}
+
+// Fallback in case GOOGLE_MAPS_API_KEY is still not defined
 if (!defined('GOOGLE_MAPS_API_KEY')) {
     define('GOOGLE_MAPS_API_KEY', 'YOUR_GOOGLE_MAPS_API_KEY_HERE'); 
 }
@@ -74,7 +82,11 @@ if ($action === 'geocode') {
 if ($action === 'autocomplete') { 
     // Autocomplete text search for places 
     $input = $data['input'] ?? ''; 
-    $country = $data['country'] ?? 'zm'; // Default to Zambia 
+    // 'zm' keeps old behaviour; send '' (or 'all') for worldwide results.
+    $country = $data['country'] ?? 'zm';
+    // Optional GPS bias: nearby places rank first, in any country.
+    $lat = $data['lat'] ?? '';
+    $lng = $data['lng'] ?? '';
 
     if (empty($input)) { 
         echo json_encode(['status' => 'error', 'message' => 'Search input is required']); 
@@ -82,7 +94,13 @@ if ($action === 'autocomplete') {
     } 
 
     $input = urlencode($input); 
-    $url = "https://maps.googleapis.com/maps/api/place/autocomplete/json?input={$input}&components=country:{$country}&key=" . GOOGLE_MAPS_API_KEY; 
+    $url = "https://maps.googleapis.com/maps/api/place/autocomplete/json?input={$input}&key=" . GOOGLE_MAPS_API_KEY;
+    if (!empty($country) && strtolower($country) !== 'all') {
+        $url .= "&components=country:{$country}";
+    }
+    if ($lat !== '' && $lng !== '') {
+        $url .= "&location=" . urlencode($lat . ',' . $lng) . "&radius=80000";
+    }
 
     $ch = curl_init(); 
     curl_setopt($ch, CURLOPT_URL, $url); 

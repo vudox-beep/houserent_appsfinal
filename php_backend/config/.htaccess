@@ -1,0 +1,4 @@
+<FilesMatch "\.(json|php)$">
+    Require all denied
+</FilesMatch>
+Deny from all
