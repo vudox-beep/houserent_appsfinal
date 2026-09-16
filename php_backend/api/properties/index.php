@@ -1,10 +1,25 @@
 <?php
 require_once '../cors.php';
-require_once '../db.php';
-require_once '../auth.php';
 require_once __DIR__ . '/../includes/listings_cache.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
+$skipCache = isset($_GET['nocache']) && (string) $_GET['nocache'] === '1';
+$listingsQueryKey = isset($_GET['id'])
+    ? 'id=' . (string) $_GET['id']
+    : (string) ($_SERVER['QUERY_STRING'] ?? '');
+
+if ($method === 'GET' && !$skipCache) {
+    $cached = listings_cache_get($listingsQueryKey);
+    if (is_array($cached)) {
+        listings_cache_send($cached, true);
+        exit();
+    }
+}
+
+require_once '../db.php';
+if ($method !== 'GET') {
+    require_once '../auth.php';
+}
 
 /**
  * Same URL rules as before — keep client image paths unchanged.
@@ -65,9 +80,6 @@ function attach_property_images(array &$property, array $images) {
 }
 
 if ($method === 'GET') {
-    // --- HIGH TRAFFIC PROTECTION ---
-    send_listings_cache_headers(false);
-
     if (isset($_GET['id'])) {
         // Get single property
         try {
@@ -99,24 +111,22 @@ if ($method === 'GET') {
             $images = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
             attach_property_images($property, $images);
 
-            echo json_encode(["status" => "success", "data" => [$property]]);
+            $payload = json_encode(
+                ["status" => "success", "data" => [$property]],
+                JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+            );
+            if (!$skipCache) {
+                $wrap = listings_cache_put($listingsQueryKey, $payload);
+                listings_cache_send($wrap, false);
+                exit();
+            }
+            echo $payload;
         } catch (Exception $e) {
             http_response_code(500);
             echo json_encode(["message" => "Server error"]);
         }
     } else {
         // Get all properties with filters — same query params / response as before.
-        $queryString = $_SERVER['QUERY_STRING'] ?? '';
-        $cacheTtlSeconds = 45;
-        $cacheFile = listings_cache_file($queryString);
-
-        if (is_file($cacheFile) && (time() - filemtime($cacheFile)) < $cacheTtlSeconds) {
-            send_listings_cache_headers(true);
-            header('Content-Type: application/json; charset=UTF-8');
-            readfile($cacheFile);
-            exit();
-        }
-
         try {
             $query = "
                 SELECT p.*, u.name as dealer_name, u.phone as dealer_phone, u.email as dealer_email
@@ -171,17 +181,24 @@ if ($method === 'GET') {
             $stmt->execute($params);
             $properties = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // One images query for all rows (was N+1 before — main slowdown).
+            // List cards only need the cover photo. Full galleries stay on ?id=.
             $imagesByProperty = [];
             if (!empty($properties)) {
                 $ids = array_column($properties, 'id');
                 $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                $idList = array_values($ids);
                 $imgStmt = $conn->prepare(
-                    "SELECT id, property_id, image_path as url, is_main
-                     FROM property_images
-                     WHERE property_id IN ($placeholders)"
+                    "SELECT pi.id, pi.property_id, pi.image_path as url, pi.is_main
+                     FROM property_images pi
+                     INNER JOIN (
+                        SELECT property_id,
+                               COALESCE(MIN(CASE WHEN is_main = 1 THEN id END), MIN(id)) AS pick_id
+                        FROM property_images
+                        WHERE property_id IN ($placeholders)
+                        GROUP BY property_id
+                     ) pick ON pi.id = pick.pick_id"
                 );
-                $imgStmt->execute(array_values($ids));
+                $imgStmt->execute($idList);
                 foreach ($imgStmt->fetchAll(PDO::FETCH_ASSOC) as $img) {
                     $pid = $img['property_id'];
                     unset($img['property_id']);
@@ -195,9 +212,15 @@ if ($method === 'GET') {
             }
             unset($prop);
 
-            $payload = json_encode(["status" => "success", "data" => $properties]);
-            @file_put_contents($cacheFile, $payload);
-            send_listings_cache_headers(false);
+            $payload = json_encode(
+                ["status" => "success", "data" => $properties],
+                JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+            );
+            if (!$skipCache) {
+                $wrap = listings_cache_put($listingsQueryKey, $payload);
+                listings_cache_send($wrap, false);
+                exit();
+            }
             echo $payload;
         } catch (Exception $e) {
             http_response_code(500);
@@ -246,6 +269,7 @@ if ($method === 'GET') {
         }
 
         http_response_code(201);
+        listings_cache_clear();
         echo json_encode(["message" => "Property created", "propertyId" => $propertyId]);
     } catch (Exception $e) {
         http_response_code(500);
@@ -281,6 +305,7 @@ if ($method === 'GET') {
 
         $stmt = $conn->prepare("UPDATE properties SET title=?, description=?, price=? WHERE id=?");
         $stmt->execute([$data->title, $data->description, $data->price, $id]);
+        listings_cache_clear();
         echo json_encode(["message" => "Property updated"]);
     } catch (Exception $e) {
         http_response_code(500);
@@ -315,6 +340,7 @@ if ($method === 'GET') {
 
         $stmt = $conn->prepare("DELETE FROM properties WHERE id = ?");
         $stmt->execute([$id]);
+        listings_cache_clear();
         echo json_encode(["message" => "Property removed"]);
     } catch (Exception $e) {
         http_response_code(500);

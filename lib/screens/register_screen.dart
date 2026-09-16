@@ -881,18 +881,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'List and manage your rentals',
       ),
       (
-        'agent',
-        Icons.handshake_outlined,
-        'Agent',
-        'Become a HouseRent Africa agent and earn',
-      ),
-      (
-        'company',
-        Icons.business_outlined,
-        'Private company',
-        'List and manage rentals for your company',
-      ),
-      (
         'driver',
         Icons.local_shipping_outlined,
         'Moving Driver',
@@ -1228,52 +1216,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         ),
                                       ),
                                     ],
-                                    if (_role == 'agent') ...[
-                                      const SizedBox(height: 8),
-                                      Container(
-                                        width: double.infinity,
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFFFF8E7),
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(
-                                            color: const Color(0xFFE0B84A),
-                                          ),
-                                        ),
-                                        child: const Text(
-                                          'Become a HouseRent Africa agent and earn. Use the listing panel and chat privately with house-hunt requests.',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 13,
-                                            height: 1.4,
-                                            color: Color(0xFF5A3D31),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                    if (_role == 'company') ...[
-                                      const SizedBox(height: 8),
-                                      Container(
-                                        width: double.infinity,
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFEEF4FF),
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(
-                                            color: const Color(0xFF90B4E8),
-                                          ),
-                                        ),
-                                        child: const Text(
-                                          'Private companies use the listing panel. After login you will complete your company details.',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 13,
-                                            height: 1.4,
-                                            color: Color(0xFF1A3A6B),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
                                     const SizedBox(height: 18),
                                     Text(
                                       'Full name',
@@ -1367,9 +1309,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         brown: brown,
                                       ),
                                     ],
-                                    if (_role == 'dealer' ||
-                                        _role == 'agent' ||
-                                        _role == 'company') ...[
+                                    if (_role == 'dealer') ...[
                                       const SizedBox(height: 16),
                                       Text(
                                         'Referral code (optional)',

@@ -4,6 +4,24 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+class HomeBannerItem {
+  const HomeBannerItem({
+    required this.imageUrl,
+    this.title = '',
+    this.subtitle = '',
+    this.linkUrl = '',
+    this.text = '',
+  });
+
+  final String imageUrl;
+  final String title;
+  final String subtitle;
+  final String linkUrl;
+  final String text;
+
+  bool get hasImage => imageUrl.isNotEmpty;
+}
+
 class ApiService {
   // Use the live production server URL
   static String get baseUrl {
@@ -1083,7 +1101,68 @@ class ApiService {
     }
   }
 
-  static Future<List<String>> fetchHomeBanners() async {
+  static String _absoluteSiteUrl(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return '';
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    if (trimmed.startsWith('//')) {
+      return 'https:$trimmed';
+    }
+    const site = 'https://houseforrent.site';
+    if (trimmed.startsWith('/')) return '$site$trimmed';
+    return '$site/${trimmed.replaceFirst(RegExp(r'^\\+'), '')}';
+  }
+
+  static HomeBannerItem? _parseHomeBannerItem(dynamic item) {
+    if (item is String) {
+      final text = item.trim();
+      if (text.isEmpty) return null;
+      return HomeBannerItem(imageUrl: '', text: text);
+    }
+    if (item is! Map) return null;
+    final image = _absoluteSiteUrl(
+      (item['image'] ??
+              item['image_url'] ??
+              item['image_path'] ??
+              item['url'] ??
+              '')
+          .toString(),
+    );
+    final title = (item['title'] ?? '').toString().trim();
+    final subtitle = (item['subtitle'] ?? item['location'] ?? '')
+        .toString()
+        .trim();
+    final text = (item['text'] ?? item['message'] ?? title)
+        .toString()
+        .trim();
+    final link = _absoluteSiteUrl(
+      (item['link'] ?? item['link_url'] ?? '').toString(),
+    );
+    if (image.isEmpty && text.isEmpty) return null;
+    return HomeBannerItem(
+      imageUrl: image,
+      title: title,
+      subtitle: subtitle,
+      linkUrl: link,
+      text: text,
+    );
+  }
+
+  static List<HomeBannerItem>? _homeBannerCache;
+  static DateTime? _homeBannerCacheAt;
+  static const Duration _homeBannerCacheTtl = Duration(minutes: 3);
+
+  static Future<List<HomeBannerItem>> fetchHomeBannerItems({
+    bool forceRefresh = false,
+  }) async {
+    if (!forceRefresh &&
+        _homeBannerCache != null &&
+        _homeBannerCacheAt != null &&
+        DateTime.now().difference(_homeBannerCacheAt!) < _homeBannerCacheTtl) {
+      return _homeBannerCache!;
+    }
     final urls = <String>[
       'https://houseforrent.site/api/home_banners.php',
       '$baseUrl/public/home_banners.php',
@@ -1099,24 +1178,30 @@ class ApiService {
         if (decoded is! Map) continue;
         final data = decoded['data'];
         if (data is! List) continue;
-        final messages = data
-            .map((item) {
-              if (item is String) return item.trim();
-              if (item is Map) {
-                return (item['text'] ?? item['message'] ?? '')
-                    .toString()
-                    .trim();
-              }
-              return '';
-            })
-            .where((text) => text.isNotEmpty)
+        final items = data
+            .map(_parseHomeBannerItem)
+            .whereType<HomeBannerItem>()
             .toList();
-        if (messages.isNotEmpty) return messages;
+        if (items.isNotEmpty) {
+          _homeBannerCache = items;
+          _homeBannerCacheAt = DateTime.now();
+          return items;
+        }
       } catch (_) {
         continue;
       }
     }
-    return const <String>[];
+    if (_homeBannerCache != null) return _homeBannerCache!;
+    return const <HomeBannerItem>[];
+  }
+
+  static Future<List<String>> fetchHomeBanners() async {
+    final items = await fetchHomeBannerItems();
+    return items
+        .where((item) => !item.hasImage)
+        .map((item) => item.text.trim())
+        .where((text) => text.isNotEmpty)
+        .toList();
   }
 
   static Future<Map<String, dynamic>> updatePropertyStatus(

@@ -41,49 +41,54 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _controller.forward().then((_) async {
-      await Future.delayed(const Duration(milliseconds: 1500));
-      if (!mounted) return;
-      // Keep the session alive across refreshes: any logged-in user goes
-      // straight back to their dashboard instead of the welcome/login flow.
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token') ?? '';
-      final role = prefs.getString('role') ?? '';
-      var userId = prefs.getString('user_id') ?? '';
-      if (token.isNotEmpty && userId.isEmpty) {
-        final parts = token.split('.');
-        if (parts.length == 3) {
-          try {
-            var normalized = parts[1].replaceAll('-', '+').replaceAll('_', '/');
-            final mod = normalized.length % 4;
-            if (mod == 2) normalized += '==';
-            if (mod == 3) normalized += '=';
-            final payload = jsonDecode(utf8.decode(base64.decode(normalized)));
-            final id = payload is Map ? payload['id'] : null;
-            if (id != null) {
-              userId = id.toString();
-              await prefs.setString('user_id', userId);
-            }
-          } catch (_) {}
+      try {
+        await Future.delayed(const Duration(milliseconds: 1500));
+        if (!mounted) return;
+        // Keep the session alive across refreshes: any logged-in user goes
+        // straight back to their dashboard instead of the welcome/login flow.
+        final prefs = await SharedPreferences.getInstance();
+        final token = prefs.getString('token') ?? '';
+        final role = prefs.getString('role') ?? '';
+        var userId = prefs.getString('user_id') ?? '';
+        if (token.isNotEmpty && userId.isEmpty) {
+          final parts = token.split('.');
+          if (parts.length == 3) {
+            try {
+              var normalized = parts[1].replaceAll('-', '+').replaceAll('_', '/');
+              final mod = normalized.length % 4;
+              if (mod == 2) normalized += '==';
+              if (mod == 3) normalized += '=';
+              final payload = jsonDecode(utf8.decode(base64.decode(normalized)));
+              final id = payload is Map ? payload['id'] : null;
+              if (id != null) {
+                userId = id.toString();
+                await prefs.setString('user_id', userId);
+              }
+            } catch (_) {}
+          }
         }
-      }
-      if (!mounted) return;
-      if (token.isNotEmpty) {
-        switch (role) {
-          case 'driver':
-            context.go('/driver-dashboard');
-            return;
-          case 'dealer':
-          case 'agent':
-          case 'company':
-            context.go('/dealer-dashboard');
-            return;
-          case 'user':
-          case 'tenant':
-            context.go('/tenant-dashboard');
-            return;
+        if (!mounted) return;
+        if (token.isNotEmpty) {
+          switch (role) {
+            case 'driver':
+              context.go('/driver-dashboard');
+              return;
+            case 'dealer':
+            case 'agent':
+            case 'company':
+              context.go('/dealer-dashboard');
+              return;
+            case 'user':
+            case 'tenant':
+              context.go('/tenant-dashboard');
+              return;
+          }
         }
+        context.go('/welcome');
+      } catch (_) {
+        if (!mounted) return;
+        context.go('/welcome');
       }
-      context.go('/welcome');
     });
   }
 

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
 import '../../widgets/skeleton_loader.dart';
 import 'dealer_payment_webview_screen.dart';
@@ -17,6 +16,8 @@ class DealerSubscriptionScreen extends StatefulWidget {
 class _DealerSubscriptionScreenState extends State<DealerSubscriptionScreen> {
   static const String _dealerPaymentUrl =
       'https://houseforrent.site/api/dealer_payment.php';
+  static const String _dealerWebsiteLoginUrl =
+      'https://houseforrent.site/login';
 
   Map<String, dynamic>? _subscription;
   bool _isLoading = true;
@@ -31,28 +32,15 @@ class _DealerSubscriptionScreenState extends State<DealerSubscriptionScreen> {
 
   Future<void> _loadSubscription() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final role = (prefs.getString('role') ?? 'dealer').toLowerCase();
       final profile = await ApiService.getProfile();
       final userId = profile['id']?.toString() ?? '';
 
-      Map<String, dynamic> sub;
-      if (role == 'agent') {
-        sub = await ApiService.checkAgentStatus();
-        _fee = double.tryParse('${sub['subscription_fee'] ?? 20}') ?? 20;
-        _planLabel = 'Agent Pro';
-      } else if (role == 'company') {
-        sub = await ApiService.checkCompanyStatus();
-        _fee = double.tryParse('${sub['subscription_fee'] ?? 300}') ?? 300;
-        _planLabel = 'Company Pro';
-      } else {
-        sub = await _dealerPaymentRequest(
-          action: 'get_status',
-          userId: userId,
-        );
-        _fee = double.tryParse('${sub['subscription_fee'] ?? 300}') ?? 300;
-        _planLabel = 'Dealer Pro';
-      }
+      Map<String, dynamic> sub = await _dealerPaymentRequest(
+        action: 'get_status',
+        userId: userId,
+      );
+      _fee = double.tryParse('${sub['subscription_fee'] ?? 300}') ?? 300;
+      _planLabel = 'Dealer Pro';
 
       if (!mounted) return;
       setState(() {
@@ -100,48 +88,17 @@ class _DealerSubscriptionScreenState extends State<DealerSubscriptionScreen> {
   }
 
   Future<void> _handleUpgrade() async {
-    final prefs = await SharedPreferences.getInstance();
-    final role = (prefs.getString('role') ?? 'dealer').toLowerCase();
-    final profile = await ApiService.getProfile();
-    final userId = profile['id']?.toString() ?? '';
-    final phone = Uri.encodeComponent(
-      (profile['phone'] ?? prefs.getString('phone') ?? '').toString(),
-    );
-    final email = Uri.encodeComponent(
-      (profile['email'] ?? prefs.getString('email') ?? '').toString(),
-    );
-    final name = Uri.encodeComponent(
-      (profile['name'] ?? prefs.getString('name') ?? 'Subscriber').toString(),
-    );
-
-    // Agent/company: same Lenco flow as tenant payment, different file & fee.
-    // Dealer: keep existing dealer payment endpoint.
-    final String url;
-    if (role == 'agent' || role == 'company') {
-      url =
-          '${ApiService.baseUrl}/agent_company/payment.php'
-          '?action=pay_page&user_id=$userId&phone=$phone&email=$email&name=$name';
-    } else {
-      url =
-          '$_dealerPaymentUrl'
-          '?action=pay_page&user_id=$userId&phone=$phone&email=$email&name=$name';
-    }
-
     if (!mounted) return;
-    Navigator.of(context)
-        .push(
-          MaterialPageRoute(
-            builder: (context) => DealerPaymentWebviewScreen(url: url),
-          ),
-        )
-        .then((_) {
-          if (mounted) {
-            setState(() {
-              _isLoading = true;
-            });
-            _loadSubscription();
-          }
-        });
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const DealerPaymentWebviewScreen(
+          url: _dealerWebsiteLoginUrl,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+    await _loadSubscription();
   }
 
   @override

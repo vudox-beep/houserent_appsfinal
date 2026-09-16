@@ -18,6 +18,17 @@ class AppLogo extends StatelessWidget {
         height: size,
         fit: BoxFit.cover,
         semanticLabel: 'HouseRent Africa logo',
+        errorBuilder: (context, error, stackTrace) {
+          return SizedBox(
+            width: size,
+            height: size,
+            child: Icon(
+              Icons.home_work_rounded,
+              size: size * 0.72,
+              color: const Color(0xFF5A3D31),
+            ),
+          );
+        },
       ),
     );
   }

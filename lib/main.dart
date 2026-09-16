@@ -53,32 +53,53 @@ void setAppThemeMode(ThemeMode mode) {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  var firebaseReady = false;
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('Flutter error: ${details.exceptionAsString()}');
+  };
+
+  runApp(const HouseRentApp());
+}
+
+Future<void> _bootstrapServices() async {
   try {
     await Firebase.initializeApp();
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    firebaseReady = true;
   } catch (error) {
     debugPrint('Firebase is waiting for its project configuration: $error');
   }
 
-  await Supabase.initialize(
-    url: 'https://zvrisevisfxtxiphzkuo.supabase.co',
-    anonKey: 'sb_publishable_ccFKo_5mX3RBRKUm3gTmbg_VmU7I8Nl',
-    // Keep keys/request traffic out of the flutter run terminal.
-    debug: false,
-  );
-
-  await NotificationService.initialize();
-  // Keep local + HouseRent Shifts trip polls alive while the app is open.
-  await NotificationService.startForegroundPolling(
-    interval: const Duration(seconds: 20),
-  );
-  if (firebaseReady) {
-    await FirebaseMessagingService.initialize();
+  try {
+    await Supabase.initialize(
+      url: 'https://zvrisevisfxtxiphzkuo.supabase.co',
+      anonKey: 'sb_publishable_ccFKo_5mX3RBRKUm3gTmbg_VmU7I8Nl',
+      debug: false,
+    );
+  } catch (error) {
+    debugPrint('Supabase failed to start: $error');
   }
 
-  runApp(const HouseRentApp());
+  try {
+    await NotificationService.initialize();
+  } catch (error) {
+    debugPrint('Notification service failed to start: $error');
+  }
+
+  try {
+    await NotificationService.startForegroundPolling(
+      interval: const Duration(seconds: 20),
+    );
+  } catch (error) {
+    debugPrint('Notification polling failed to start: $error');
+  }
+
+  try {
+    if (Firebase.apps.isNotEmpty) {
+      await FirebaseMessagingService.initialize();
+    }
+  } catch (error) {
+    debugPrint('Firebase messaging failed to start: $error');
+  }
 }
 
 final GoRouter _router = GoRouter(
@@ -273,8 +294,23 @@ final GoRouter _router = GoRouter(
   ],
 );
 
-class HouseRentApp extends StatelessWidget {
+class HouseRentApp extends StatefulWidget {
   const HouseRentApp({super.key});
+
+  @override
+  State<HouseRentApp> createState() => _HouseRentAppState();
+}
+
+class _HouseRentAppState extends State<HouseRentApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Ask for notification/background permission after the first screen is
+    // visible. Requesting too early (no Activity) skips the Android 13+ dialog.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_bootstrapServices());
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

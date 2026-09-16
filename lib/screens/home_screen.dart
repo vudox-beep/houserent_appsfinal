@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../widgets/app_logo.dart';
+import '../widgets/home_image_banner.dart';
 import '../widgets/home_sliding_banner.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
@@ -42,6 +43,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   final GlobalKey<HomeSlidingBannerState> _bannerKey =
       GlobalKey<HomeSlidingBannerState>();
+  final GlobalKey<HomeImageBannerState> _imageBannerKey =
+      GlobalKey<HomeImageBannerState>();
 
   @override
   void initState() {
@@ -293,6 +296,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await Future.wait([
       _loadProperties(shuffle: true),
       _bannerKey.currentState?.reload() ?? Future<void>.value(),
+      _imageBannerKey.currentState?.reload() ?? Future<void>.value(),
     ]);
   }
 
@@ -2273,6 +2277,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
+              HomeImageBanner(key: _imageBannerKey),
               // Footer
               Container(
                 width: double.infinity,
